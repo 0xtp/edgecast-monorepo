@@ -184,6 +184,9 @@ def masked_config(session: Session) -> list[dict[str, Any]]:
     for name in type(s).model_fields:
         if name in overrides:
             value, origin = overrides[name], "override"
+        elif name == "MODE":
+            value = current_mode(session, s).value
+            origin = "env" if s.MODE_FORCE_ENV or get_state(session, "mode") is None else "runtime"
         else:
             value, origin = getattr(s, name), "env"
         secret = name in SECRET_KEYS or isinstance(value, SecretStr)

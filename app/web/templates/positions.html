@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Positions · Edgecast{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <h1 class="text-lg font-semibold text-zinc-50">Positions</h1>
+  <div class="seg">
+    <a href="/positions?tab=BOT" class="seg-btn {{ 'seg-on' if tab == 'BOT' }}">Bot</a>
+    <a href="/positions?tab=MANUAL" class="seg-btn {{ 'seg-on' if tab == 'MANUAL' }}">Manual</a>
+  </div>
+</div>
+<p class="mt-1 text-sm text-zinc-400">Exits are re-evaluated every {{ reeval }} min. {% if tab == 'MANUAL' %}Manual positions get exit <em>signals</em>; the bot never trades them.{% endif %}</p>
+<div class="card mt-4 overflow-x-auto p-0">
+<table class="tbl">
+  <thead><tr><th>Market</th><th>Side</th><th>Book</th><th class="num">Size</th><th class="num">Entry</th><th class="num">Mark</th>
+    <th class="num">Unrealised</th><th class="num">p_model</th><th class="num">Edge vs mark</th><th>Exit signal</th><th>Next re-eval</th><th></th></tr></thead>
+  <tbody>
+  {% for r in rows %}{% set p = r.p %}
+  <tr>
+    <td class="max-w-[18rem] truncate"><a href="{{ p.market.url }}" target="_blank" rel="noopener">{{ p.market.event.title }}</a><div class="text-[11px] text-zinc-500">{{ p.market.bucket_label }} · opened {{ p.opened_at|dt }}</div></td>
+    <td><span class="badge {{ 'badge-yes' if p.outcome == 'YES' else 'badge-no' }}">{{ p.outcome }}</span></td>
+    <td class="text-xs text-zinc-400">{{ p.mode }}</td>
+    <td class="num">{{ "%.2f"|format(p.size) }}</td>
+    <td class="num">{{ "%.3f"|format(p.avg_price) }}</td>
+    <td class="num">{{ "%.2f"|format(r.mark) }}</td>
+    <td class="num {{ r.upnl|pnl }}">{{ r.upnl|usd(True) }}</td>
+    <td class="num">{{ p.last_p_model|pct if p.last_p_model is not none else '—' }}</td>
+    <td class="num">{{ r.edge|pct(1, True) if r.edge is not none else '—' }}</td>
+    <td>{% if p.exit_signal %}<span class="badge badge-warn" title="{{ p.exit_signal_detail }}">SELL — {{ 'caught up' if p.exit_signal == 'TAKE_PROFIT' else 'forecast flipped' }}</span>{% else %}<span class="text-xs text-zinc-500">hold</span>{% endif %}</td>
+    <td class="text-xs text-zinc-400">{% if p.last_eval_at %}last {{ p.last_eval_at|dt('%H:%M') }} · every {{ reeval }}m{% else %}next cycle{% endif %}</td>
+    <td class="text-right">
+      <button class="btn btn-sm" hx-post="/action/close/{{ p.id }}" hx-target="#toast"
+        hx-confirm="{{ 'Sell this position at the best bid?' if tab == 'BOT' else 'Mark this manual position as closed?' }}">Close</button>
+    </td>
+  </tr>
+  {% else %}<tr><td colspan="12" class="py-10 text-center text-zinc-500">No open {{ tab|lower }} positions.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+<div class="mt-4 grid gap-4 md:grid-cols-3">
+  {% for b, c in cards.items() if c %}
+  <section class="card"><h2 class="card-title">{{ b }}</h2>
+    <dl class="mt-2 space-y-1 text-sm">
+      <div class="flex justify-between"><dt class="text-zinc-400">Cash</dt><dd class="tabular-nums">{{ c.cash|usd }}</dd></div>
+      <div class="flex justify-between"><dt class="text-zinc-400">Realised</dt><dd class="tabular-nums {{ c.realized|pnl }}">{{ c.realized|usd(True) }}</dd></div>
+      <div class="flex justify-between"><dt class="text-zinc-400">Unrealised</dt><dd class="tabular-nums {{ c.unrealized|pnl }}">{{ c.unrealized|usd(True) }}</dd></div>
+      <div class="flex justify-between"><dt class="text-zinc-400">Equity</dt><dd class="tabular-nums">{{ c.equity|usd }}</dd></div>
+    </dl></section>
+  {% endfor %}
+</div>
+{% endblock %}

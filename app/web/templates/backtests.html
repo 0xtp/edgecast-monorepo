@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Backtests · Edgecast{% endblock %}
+{% block content %}
+<h1 class="text-lg font-semibold text-zinc-50">Backtests</h1>
+<p class="text-sm text-zinc-400">Generate with <code>python -m backtest.runner</code> (or <code>docker compose run --rm worker python -m backtest.runner</code>). Reports land in <code>backtest/reports/</code>.</p>
+<div class="card mt-4 overflow-x-auto p-0">
+<table class="tbl"><thead><tr><th>Report</th><th>Created</th><th class="num">Bets</th><th class="num">Hit rate</th><th class="num">ROI</th><th class="num">Max DD</th><th>Verdict</th></tr></thead><tbody>
+{% for r in reports %}{% set s = r.summary %}
+<tr><td><a href="/backtests/{{ r.name }}" target="_blank" rel="noopener">{{ r.name }}</a></td><td>{{ r.mtime|dt }}</td>
+  <td class="num">{{ s.bets if s.bets is defined else '—' }}</td><td class="num">{{ s.hit_rate|pct if s.hit_rate is defined and s.hit_rate is not none else '—' }}</td>
+  <td class="num {{ s.roi|pnl if s.roi is defined }}">{{ s.roi|pct(1, True) if s.roi is defined and s.roi is not none else '—' }}</td>
+  <td class="num">{{ s.max_drawdown|usd if s.max_drawdown is defined else '—' }}</td>
+  <td class="max-w-sm truncate text-xs text-zinc-400">{{ s.verdict if s.verdict is defined else '' }}</td></tr>
+{% else %}<tr><td colspan="7" class="py-10 text-center text-zinc-500">No reports yet.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

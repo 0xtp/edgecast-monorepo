@@ -567,8 +567,7 @@ class Engine:
         if mode == Mode.SCAN:
             active.action = "signal only (SCAN)"
         else:
-            self._maybe_enter(s, eff, mode, ev, m, best, fee, active)
-            if active.action.startswith(mode.value):
+            if self._maybe_enter(s, eff, mode, ev, m, best, fee, active):
                 stats["orders"] += 1
         min_conf = Confidence(eff.MIN_SIGNAL_CONFIDENCE)
         delta = float(eff.SIGNAL_REALERT_EDGE_DELTA)
@@ -621,7 +620,7 @@ class Engine:
         opp: Opportunity,
         fee: FeeModel,
         sig: Signal,
-    ) -> None:
+    ) -> bool:
         book_name = mode.value
         held = s.scalar(
             select(Position.id).where(Position.mode == book_name, Position.market_id == m.id, Position.status == "OPEN")
@@ -636,7 +635,7 @@ class Engine:
         )
         if held or working:
             sig.action = f"{book_name}: already {'holding' if held else 'working an order'}"
-            return
+            return False
         halted, _why = is_halted(s)
         geo = bool(get_state(s, "geoblocked", True))
         rstate, snap = books.risk_state(
@@ -657,7 +656,7 @@ class Engine:
         )
         if sized.shares <= 0:
             sig.action = f"skipped: {sized.reason}"
-            return
+            return False
         decision = check(
             OrderRequest(
                 market_id=m.id,
@@ -680,7 +679,7 @@ class Engine:
                     f"🧱 Risk cap hit ({decision.reason}) — {m.bucket_label} · {ev.title}",
                     dedupe_key=f"cap:{decision.reason}",
                 )
-            return
+            return False
         ex = self.executor(s, mode)
         assert ex is not None
         sig.bot_stake_usd = round(decision.size * (opp.limit_price + fps), 2)
@@ -698,6 +697,7 @@ class Engine:
             signal_id=sig.id,
         )
         s.expire_all()
+        return True
 
     # ------------------------------------------------------------------ execution upkeep
     def sync_orders(self) -> int:
@@ -748,7 +748,7 @@ class Engine:
                     cache[ev.id] = self.model_event(s, ev, eff, now)
                 model = cache[ev.id]
                 try:
-                    ob = self.book(pos.token_id, max_age_s=30)
+                    ob = self.book(pos.token_id, max_age_s=0)
                 except Exception as e:
                     log.warning("exit eval: book failed %s: %s", pos.token_id, e)
                     continue

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Audit · Edgecast{% endblock %}
+{% block content %}
+<h1 class="text-lg font-semibold text-zinc-50">Audit log</h1>
+<p class="text-sm text-zinc-400">Mode changes, setting changes, kill/pause/resume, logins and every Telegram command.</p>
+<div class="card mt-4 overflow-x-auto p-0">
+<table class="tbl"><thead><tr><th>Time</th><th>Source</th><th>Actor</th><th>Action</th><th>Detail</th></tr></thead><tbody>
+{% for r in rows %}<tr><td>{{ r.ts|dt('%Y-%m-%d %H:%M:%S') }}</td><td><span class="badge {{ 'badge-yes' if r.source == 'TELEGRAM' else 'badge-muted' }}">{{ r.source }}</span></td>
+<td class="text-xs text-zinc-400">{{ r.actor }}</td><td class="font-medium">{{ r.action }}</td><td class="max-w-xl truncate text-xs text-zinc-300" title="{{ r.detail }}">{{ r.detail }}</td></tr>
+{% else %}<tr><td colspan="5" class="py-10 text-center text-zinc-500">Empty.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

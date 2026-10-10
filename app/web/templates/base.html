@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Edgecast{% endblock %}</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%236366f1%27/%3E%3Ctext x=%2716%27 y=%2722%27 font-family=%27sans-serif%27 font-size=%2718%27 font-weight=%27700%27 fill=%27white%27 text-anchor=%27middle%27%3EE%3C/text%3E%3C/svg%3E">
+  <link rel="preload" href="/static/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/css/app.css">
+  {% block head %}{% endblock %}
+  <script src="/static/js/htmx.min.js" defer></script>
+  <script src="/static/js/alpine.min.js" defer></script>
+  <script src="/static/js/app.js" defer></script>
+</head>
+<body class="min-h-screen" hx-headers='{"X-CSRF-Token": "{{ csrf }}"}'>
+  <header class="sticky top-0 z-30 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
+    <div class="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5">
+      <a href="/" class="flex items-center gap-2 text-zinc-50 hover:text-white">
+        <span class="grid h-7 w-7 place-items-center rounded-lg bg-indigo-500 text-sm font-bold text-white">E</span>
+        <span class="font-semibold tracking-tight">Edgecast</span>
+      </a>
+      <span class="badge {{ 'badge-warn' if hdr.mode == 'LIVE' else 'badge-yes' if hdr.mode == 'PAPER' else 'badge-muted' }}">{{ hdr.mode }}</span>
+      {% if hdr.halted %}<span class="badge bg-rose-500/15 text-rose-200 ring-rose-400/30">HALTED</span>
+      {% elif hdr.paused %}<span class="badge badge-warn">PAUSED</span>{% endif %}
+      <nav class="ml-2 flex flex-1 gap-1 overflow-x-auto">
+        {% for key, label, href in [("overview","Overview","/"),("signals","Signals","/signals"),("positions","Positions","/positions"),("history","History","/history"),("model","Model","/model"),("backtests","Backtests","/backtests"),("settings","Settings","/settings"),("audit","Audit","/audit")] %}
+        <a href="{{ href }}" class="nav-link {{ 'nav-active' if page == key }}">{{ label }}</a>
+        {% endfor %}
+      </nav>
+      <form method="post" action="/logout" class="hidden sm:block"><button class="btn btn-ghost btn-sm text-zinc-400">Log out</button></form>
+    </div>
+  </header>
+
+  {% if hdr.geoblocked %}
+  <div class="bg-rose-600 px-4 py-2 text-center text-sm font-semibold text-white">Geoblocked: orders are refused. {{ hdr.geoblock_detail }}</div>
+  {% elif hdr.geoblocked is none %}
+  <div class="bg-amber-500/20 px-4 py-1.5 text-center text-xs text-amber-100">Geoblock status unknown (worker has not checked yet). LIVE orders are refused until it confirms.</div>
+  {% endif %}
+  {% if hdr.halted %}
+  <div class="bg-rose-950 px-4 py-2 text-center text-sm text-rose-100 ring-1 ring-rose-800">Trading halted: {{ hdr.halt_reason }}. Exits still allowed. Resume from the Overview page.</div>
+  {% endif %}
+  {% if hdr.worker_stale %}
+  <div class="bg-amber-500/15 px-4 py-1.5 text-center text-xs text-amber-100">Worker heartbeat {{ 'missing' if not hdr.worker_ts else 'last seen ' ~ (hdr.worker_ts|ago) }} — data below may be stale.</div>
+  {% endif %}
+
+  <main class="mx-auto max-w-7xl px-4 py-5">
+    <div id="toast" class="fixed bottom-4 right-4 z-50 max-w-sm" aria-live="polite"></div>
+    {% block content %}{% endblock %}
+  </main>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Signals · Edgecast{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="text-lg font-semibold text-zinc-50">Signals</h1>
+    <p class="text-sm text-zinc-400">Live opportunities. Edge is after fees at the best ask. Refreshes every 30 s.</p>
+  </div>
+  <form id="filters" class="flex flex-wrap items-end gap-2" hx-get="/signals?partial=1" hx-target="#sig-table" hx-trigger="change">
+    <label class="text-xs text-zinc-400">Confidence
+      <select name="confidence" class="input mt-1 w-28"><option value="">All</option>{% for c in ["HIGH","MED","LOW"] %}<option {{ 'selected' if f_conf == c }}>{{ c }}</option>{% endfor %}</select></label>
+    <label class="text-xs text-zinc-400">City
+      <select name="city" class="input mt-1 w-36"><option value="">All</option>{% for c in cities %}<option {{ 'selected' if f_city == c }}>{{ c }}</option>{% endfor %}</select></label>
+    <label class="text-xs text-zinc-400">Min edge %
+      <input name="min_edge" type="number" step="0.5" min="0" value="{{ (100*f_edge)|round(1) }}" class="input mt-1 w-24"></label>
+  </form>
+</div>
+<div id="sig-table" class="mt-4" hx-get="/signals?partial=1" hx-include="#filters" hx-trigger="every 30s" hx-swap="innerHTML">
+  {% include "partials/signals_table.html" %}
+</div>
+{% endblock %}

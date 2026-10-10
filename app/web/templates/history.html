@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}History · Edgecast{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-3">
+  <div><h1 class="text-lg font-semibold text-zinc-50">History</h1><p class="text-sm text-zinc-400">Every order intent and its fills, with the reason for entry or exit.</p></div>
+  <form class="flex flex-wrap items-end gap-2" method="get">
+    <label class="text-xs text-zinc-400">City<input name="city" value="{{ f.city }}" class="input mt-1 w-28"></label>
+    <label class="text-xs text-zinc-400">Date<input name="day" type="date" value="{{ f.day }}" class="input mt-1 w-36"></label>
+    <label class="text-xs text-zinc-400">Mode<select name="mode" class="input mt-1 w-24"><option value="">All</option>{% for m in ["PAPER","LIVE"] %}<option {{ 'selected' if f.mode == m }}>{{ m }}</option>{% endfor %}</select></label>
+    <label class="text-xs text-zinc-400">Outcome<select name="outcome" class="input mt-1 w-24"><option value="">All</option>{% for o in ["YES","NO"] %}<option {{ 'selected' if f.outcome == o }}>{{ o }}</option>{% endfor %}</select></label>
+    <button class="btn">Filter</button>
+    <a class="btn" href="/history.csv?city={{ f.city }}&day={{ f.day }}&mode={{ f.mode }}&outcome={{ f.outcome }}">Export CSV</a>
+  </form>
+</div>
+<div class="card mt-4 overflow-x-auto p-0">
+<table class="tbl">
+  <thead><tr><th>Time</th><th>Mode</th><th>Market</th><th>Side</th><th class="num">Limit</th><th class="num">Size</th><th class="num">Filled</th><th class="num">Avg fill</th><th class="num">Fees</th><th>Status</th><th>Reason</th></tr></thead>
+  <tbody>
+  {% for r in rows %}{% set it = r.it %}
+  <tr>
+    <td>{{ it.created_at|dt }}</td><td class="text-xs">{{ it.mode }}</td>
+    <td class="max-w-[16rem] truncate"><a href="{{ r.m.url }}" target="_blank" rel="noopener">{{ r.ev.city|city }} · {{ r.ev.local_date }}</a><div class="text-[11px] text-zinc-500">{{ r.m.bucket_label }}</div></td>
+    <td><span class="badge {{ 'badge-yes' if it.outcome == 'YES' else 'badge-no' }}">{{ it.side }} {{ it.outcome }}</span></td>
+    <td class="num">{{ "%.2f"|format(it.price) }}</td><td class="num">{{ "%.2f"|format(it.size) }}</td><td class="num">{{ "%.2f"|format(it.filled_size) }}</td>
+    <td class="num">{{ "%.3f"|format(r.avg) if r.avg is not none else '—' }}</td><td class="num">{{ r.fees|usd }}</td>
+    <td><span class="badge {{ 'badge-warn' if it.status in ('PENDING','FAILED','REJECTED') else 'badge-muted' }}" title="{{ it.error }}">{{ it.status }}</span></td>
+    <td class="max-w-[18rem] truncate text-xs text-zinc-400" title="{{ it.reason }}">{{ it.reason }}</td>
+  </tr>
+  {% else %}<tr><td colspan="11" class="py-10 text-center text-zinc-500">No orders yet.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

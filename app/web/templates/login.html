@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edgecast · Sign in</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body class="grid min-h-screen place-items-center px-4">
+  <form method="post" action="/login" class="card w-full max-w-sm space-y-4 p-6">
+    <div class="flex items-center gap-2">
+      <span class="grid h-8 w-8 place-items-center rounded-lg bg-indigo-500 font-bold text-white">E</span>
+      <h1 class="text-lg font-semibold text-zinc-50">Edgecast</h1>
+    </div>
+    {% if not configured %}
+    <p class="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
+      UI_PASSWORD_HASH is not set. Generate one with <code>python -m app.tools.hash_password</code>.</p>
+    {% endif %}
+    {% if error %}<p class="text-sm text-rose-300">{{ error }}</p>{% endif %}
+    <label class="block text-sm text-zinc-400">Username<input name="username" class="input mt-1" autocomplete="username" required></label>
+    <label class="block text-sm text-zinc-400">Password<input name="password" type="password" class="input mt-1" autocomplete="current-password" required></label>
+    <button class="btn btn-accent w-full justify-center">Sign in</button>
+  </form>
+</body>
+</html>
