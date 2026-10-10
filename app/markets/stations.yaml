@@ -1,0 +1,628 @@
+# Curated resolution stations. The parser only trades markets whose station is listed here.
+# Coordinates are airport reference points (±0.01°), well inside one 0.25° forecast grid cell.
+# Add a station: copy a block, check the ICAO on the market's resolution-source URL, and
+# verify lat/lon/tz against the station's METAR metadata (e.g. IEM station page).
+CYYZ:
+  aliases:
+  - pearson
+  city: toronto
+  city_aliases:
+  - toronto
+  country: CA
+  iem_id: CYYZ
+  lat: 43.6777
+  lon: -79.6248
+  name: Toronto Pearson International Airport
+  tz: America/Toronto
+EDDB:
+  aliases:
+  - brandenburg
+  city: berlin
+  city_aliases:
+  - berlin
+  country: DE
+  iem_id: EDDB
+  lat: 52.3667
+  lon: 13.5033
+  name: Berlin Brandenburg Airport
+  tz: Europe/Berlin
+EGLC:
+  aliases:
+  - london city
+  city: london
+  city_aliases:
+  - london
+  country: GB
+  iem_id: EGLC
+  lat: 51.5053
+  lon: 0.0553
+  name: London City Airport
+  tz: Europe/London
+EGLL:
+  aliases:
+  - heathrow
+  city: london
+  city_aliases:
+  - london
+  country: GB
+  iem_id: EGLL
+  lat: 51.4775
+  lon: -0.4614
+  name: Heathrow Airport
+  tz: Europe/London
+EHAM:
+  aliases:
+  - schiphol
+  city: amsterdam
+  city_aliases:
+  - amsterdam
+  country: NL
+  iem_id: EHAM
+  lat: 52.3105
+  lon: 4.7683
+  name: Amsterdam Airport Schiphol
+  tz: Europe/Amsterdam
+EPWA:
+  aliases:
+  - chopin
+  city: warsaw
+  city_aliases:
+  - warsaw
+  country: PL
+  iem_id: EPWA
+  lat: 52.1657
+  lon: 20.9671
+  name: Warsaw Chopin Airport
+  tz: Europe/Warsaw
+KATL:
+  aliases:
+  - hartsfield
+  city: atlanta
+  city_aliases:
+  - atlanta
+  country: US
+  iem_id: ATL
+  lat: 33.6367
+  lon: -84.4281
+  name: Hartsfield-Jackson Atlanta International Airport
+  tz: America/New_York
+KAUS:
+  aliases:
+  - bergstrom
+  city: austin
+  city_aliases:
+  - austin
+  country: US
+  iem_id: AUS
+  lat: 30.1945
+  lon: -97.6699
+  name: Austin-Bergstrom International Airport
+  tz: America/Chicago
+KBOS:
+  aliases:
+  - logan
+  city: boston
+  city_aliases:
+  - boston
+  country: US
+  iem_id: BOS
+  lat: 42.3656
+  lon: -71.0096
+  name: Logan International Airport
+  tz: America/New_York
+KDAL:
+  aliases:
+  - love field
+  city: dallas
+  city_aliases:
+  - dallas
+  country: US
+  iem_id: DAL
+  lat: 32.8471
+  lon: -96.8518
+  name: Dallas Love Field
+  tz: America/Chicago
+KDCA:
+  aliases:
+  - reagan
+  - national airport
+  city: washington dc
+  city_aliases:
+  - washington dc
+  - dc
+  - washington
+  - washington d.c.
+  country: US
+  iem_id: DCA
+  lat: 38.8512
+  lon: -77.0402
+  name: Ronald Reagan Washington National Airport
+  tz: America/New_York
+KDEN:
+  aliases:
+  - denver international
+  city: denver
+  city_aliases:
+  - denver
+  country: US
+  iem_id: DEN
+  lat: 39.8617
+  lon: -104.6731
+  name: Denver International Airport
+  tz: America/Denver
+KDFW:
+  aliases:
+  - fort worth
+  city: dallas
+  city_aliases:
+  - dallas
+  country: US
+  iem_id: DFW
+  lat: 32.8968
+  lon: -97.038
+  name: Dallas/Fort Worth International Airport
+  tz: America/Chicago
+KHOU:
+  aliases:
+  - hobby
+  city: houston
+  city_aliases:
+  - houston
+  country: US
+  iem_id: HOU
+  lat: 29.6454
+  lon: -95.2789
+  name: William P. Hobby Airport
+  tz: America/Chicago
+KIAH:
+  aliases:
+  - bush intercontinental
+  - intercontinental
+  city: houston
+  city_aliases:
+  - houston
+  country: US
+  iem_id: IAH
+  lat: 29.9844
+  lon: -95.3414
+  name: George Bush Intercontinental Airport
+  tz: America/Chicago
+KJFK:
+  aliases:
+  - kennedy
+  - jfk
+  city: nyc
+  city_aliases:
+  - nyc
+  - new york
+  - new york city
+  country: US
+  iem_id: JFK
+  lat: 40.6398
+  lon: -73.7789
+  name: John F. Kennedy International Airport
+  tz: America/New_York
+KLAS:
+  aliases:
+  - harry reid
+  - mccarran
+  city: las vegas
+  city_aliases:
+  - las vegas
+  country: US
+  iem_id: LAS
+  lat: 36.084
+  lon: -115.1537
+  name: Harry Reid International Airport
+  tz: America/Los_Angeles
+KLAX:
+  aliases:
+  - los angeles international
+  city: los angeles
+  city_aliases:
+  - los angeles
+  - la
+  country: US
+  iem_id: LAX
+  lat: 33.9425
+  lon: -118.4081
+  name: Los Angeles International Airport
+  tz: America/Los_Angeles
+KLGA:
+  aliases:
+  - laguardia
+  city: nyc
+  city_aliases:
+  - nyc
+  - new york
+  - new york city
+  country: US
+  iem_id: LGA
+  lat: 40.7769
+  lon: -73.874
+  name: LaGuardia Airport
+  tz: America/New_York
+KMDW:
+  aliases:
+  - midway
+  city: chicago
+  city_aliases:
+  - chicago
+  country: US
+  iem_id: MDW
+  lat: 41.7868
+  lon: -87.7522
+  name: Midway International Airport
+  tz: America/Chicago
+KMIA:
+  aliases:
+  - miami international
+  city: miami
+  city_aliases:
+  - miami
+  country: US
+  iem_id: MIA
+  lat: 25.7881
+  lon: -80.3169
+  name: Miami International Airport
+  tz: America/New_York
+KMSP:
+  aliases:
+  - minneapolis-saint paul
+  - msp
+  city: minneapolis
+  city_aliases:
+  - minneapolis
+  country: US
+  iem_id: MSP
+  lat: 44.8848
+  lon: -93.2223
+  name: Minneapolis-Saint Paul International Airport
+  tz: America/Chicago
+KNYC:
+  aliases:
+  - central park
+  city: nyc
+  city_aliases:
+  - nyc
+  - new york
+  - new york city
+  country: US
+  iem_id: NYC
+  lat: 40.779
+  lon: -73.9692
+  name: Central Park
+  tz: America/New_York
+KORD:
+  aliases:
+  - o'hare
+  - ohare
+  city: chicago
+  city_aliases:
+  - chicago
+  country: US
+  iem_id: ORD
+  lat: 41.9786
+  lon: -87.9048
+  name: O'Hare International Airport
+  tz: America/Chicago
+KPHL:
+  aliases:
+  - philadelphia international
+  city: philadelphia
+  city_aliases:
+  - philadelphia
+  country: US
+  iem_id: PHL
+  lat: 39.8721
+  lon: -75.2411
+  name: Philadelphia International Airport
+  tz: America/New_York
+KPHX:
+  aliases:
+  - sky harbor
+  city: phoenix
+  city_aliases:
+  - phoenix
+  country: US
+  iem_id: PHX
+  lat: 33.4343
+  lon: -112.0116
+  name: Phoenix Sky Harbor International Airport
+  tz: America/Phoenix
+KSEA:
+  aliases:
+  - seattle-tacoma
+  - sea-tac
+  city: seattle
+  city_aliases:
+  - seattle
+  country: US
+  iem_id: SEA
+  lat: 47.4447
+  lon: -122.3017
+  name: Seattle-Tacoma International Airport
+  tz: America/Los_Angeles
+KSFO:
+  aliases:
+  - san francisco international
+  city: san francisco
+  city_aliases:
+  - san francisco
+  - sf
+  country: US
+  iem_id: SFO
+  lat: 37.619
+  lon: -122.3749
+  name: San Francisco International Airport
+  tz: America/Los_Angeles
+LEMD:
+  aliases:
+  - barajas
+  city: madrid
+  city_aliases:
+  - madrid
+  country: ES
+  iem_id: LEMD
+  lat: 40.4719
+  lon: -3.5626
+  name: Adolfo Suárez Madrid–Barajas Airport
+  tz: Europe/Madrid
+LFPB:
+  aliases:
+  - le bourget
+  city: paris
+  city_aliases:
+  - paris
+  country: FR
+  iem_id: LFPB
+  lat: 48.9694
+  lon: 2.4414
+  name: Paris-Le Bourget Airport
+  tz: Europe/Paris
+LFPG:
+  aliases:
+  - charles de gaulle
+  city: paris
+  city_aliases:
+  - paris
+  country: FR
+  iem_id: LFPG
+  lat: 49.0097
+  lon: 2.5479
+  name: Paris Charles de Gaulle Airport
+  tz: Europe/Paris
+LIMC:
+  aliases:
+  - malpensa
+  city: milan
+  city_aliases:
+  - milan
+  country: IT
+  iem_id: LIMC
+  lat: 45.6306
+  lon: 8.7281
+  name: Milan Malpensa Airport
+  tz: Europe/Rome
+LLBG:
+  aliases:
+  - ben gurion
+  city: tel aviv
+  city_aliases:
+  - tel aviv
+  country: IL
+  iem_id: LLBG
+  lat: 32.0114
+  lon: 34.8867
+  name: Ben Gurion Airport
+  tz: Asia/Jerusalem
+LTAC:
+  aliases:
+  - esenboga
+  - esenboğa
+  city: ankara
+  city_aliases:
+  - ankara
+  country: TR
+  iem_id: LTAC
+  lat: 40.1281
+  lon: 32.9951
+  name: Ankara Esenboğa Airport
+  tz: Europe/Istanbul
+MMMX:
+  aliases:
+  - benito juárez
+  - benito juarez
+  city: mexico city
+  city_aliases:
+  - mexico city
+  country: MX
+  iem_id: MMMX
+  lat: 19.4363
+  lon: -99.0721
+  name: Mexico City International Airport
+  tz: America/Mexico_City
+NZWN:
+  aliases:
+  - wellington international
+  city: wellington
+  city_aliases:
+  - wellington
+  country: NZ
+  iem_id: NZWN
+  lat: -41.3272
+  lon: 174.8053
+  name: Wellington International Airport
+  tz: Pacific/Auckland
+OMDB:
+  aliases:
+  - dubai international
+  city: dubai
+  city_aliases:
+  - dubai
+  country: AE
+  iem_id: OMDB
+  lat: 25.2532
+  lon: 55.3657
+  name: Dubai International Airport
+  tz: Asia/Dubai
+RCTP:
+  aliases:
+  - taoyuan
+  city: taipei
+  city_aliases:
+  - taipei
+  country: TW
+  iem_id: RCTP
+  lat: 25.0777
+  lon: 121.2328
+  name: Taiwan Taoyuan International Airport
+  tz: Asia/Taipei
+RJTT:
+  aliases:
+  - haneda
+  city: tokyo
+  city_aliases:
+  - tokyo
+  country: JP
+  iem_id: RJTT
+  lat: 35.5523
+  lon: 139.7797
+  name: Tokyo Haneda Airport
+  tz: Asia/Tokyo
+RKSI:
+  aliases:
+  - incheon
+  city: seoul
+  city_aliases:
+  - seoul
+  country: KR
+  iem_id: RKSI
+  lat: 37.4602
+  lon: 126.4407
+  name: Incheon International Airport
+  tz: Asia/Seoul
+RKSS:
+  aliases:
+  - gimpo
+  city: seoul
+  city_aliases:
+  - seoul
+  country: KR
+  iem_id: RKSS
+  lat: 37.5583
+  lon: 126.7906
+  name: Gimpo International Airport
+  tz: Asia/Seoul
+SAEZ:
+  aliases:
+  - ezeiza
+  - pistarini
+  city: buenos aires
+  city_aliases:
+  - buenos aires
+  country: AR
+  iem_id: SAEZ
+  lat: -34.8222
+  lon: -58.5358
+  name: Ministro Pistarini International Airport
+  tz: America/Argentina/Buenos_Aires
+SBGR:
+  aliases:
+  - guarulhos
+  city: sao paulo
+  city_aliases:
+  - sao paulo
+  - são paulo
+  country: BR
+  iem_id: SBGR
+  lat: -23.4356
+  lon: -46.4731
+  name: São Paulo/Guarulhos International Airport
+  tz: America/Sao_Paulo
+VHHH:
+  aliases:
+  - chek lap kok
+  - hong kong international
+  city: hong kong
+  city_aliases:
+  - hong kong
+  country: HK
+  iem_id: VHHH
+  lat: 22.308
+  lon: 113.9185
+  name: Hong Kong International Airport
+  tz: Asia/Hong_Kong
+VIDP:
+  aliases:
+  - indira gandhi
+  city: delhi
+  city_aliases:
+  - delhi
+  - new delhi
+  country: IN
+  iem_id: VIDP
+  lat: 28.5562
+  lon: 77.1
+  name: Indira Gandhi International Airport
+  tz: Asia/Kolkata
+VILK:
+  aliases:
+  - charan singh
+  city: lucknow
+  city_aliases:
+  - lucknow
+  country: IN
+  iem_id: VILK
+  lat: 26.7606
+  lon: 80.8893
+  name: Chaudhary Charan Singh International Airport
+  tz: Asia/Kolkata
+WSSS:
+  aliases:
+  - changi
+  city: singapore
+  city_aliases:
+  - singapore
+  country: SG
+  iem_id: WSSS
+  lat: 1.3644
+  lon: 103.9915
+  name: Singapore Changi Airport
+  tz: Asia/Singapore
+YSSY:
+  aliases:
+  - kingsford smith
+  city: sydney
+  city_aliases:
+  - sydney
+  country: AU
+  iem_id: YSSY
+  lat: -33.9461
+  lon: 151.1772
+  name: Sydney Kingsford Smith Airport
+  tz: Australia/Sydney
+ZBAA:
+  aliases:
+  - beijing capital
+  city: beijing
+  city_aliases:
+  - beijing
+  country: CN
+  iem_id: ZBAA
+  lat: 40.0801
+  lon: 116.5846
+  name: Beijing Capital International Airport
+  tz: Asia/Shanghai
+ZSPD:
+  aliases:
+  - pudong
+  city: shanghai
+  city_aliases:
+  - shanghai
+  country: CN
+  iem_id: ZSPD
+  lat: 31.1443
+  lon: 121.8083
+  name: Shanghai Pudong International Airport
+  tz: Asia/Shanghai
