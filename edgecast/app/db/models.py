@@ -371,3 +371,18 @@ class Outbox(Base):
     sent: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     sent_at: Mapped[datetime | None] = ts_col(nullable=True)
     error: Mapped[str] = mapped_column(Text, default="")
+
+
+class ResolvedStation(Base):
+    """A resolution station not in the curated stations.yaml, looked up automatically from official metadata."""
+
+    __tablename__ = "resolved_station"
+    icao: Mapped[str] = mapped_column(String(8), primary_key=True)
+    name: Mapped[str] = mapped_column(String(128))
+    city: Mapped[str] = mapped_column(String(64))
+    lat: Mapped[float] = mapped_column(Float)
+    lon: Mapped[float] = mapped_column(Float)
+    tz: Mapped[str] = mapped_column(String(64))
+    country: Mapped[str] = mapped_column(String(8))
+    source: Mapped[str] = mapped_column(String(64), default="aviationweather.gov + open-meteo tz")
+    resolved_at: Mapped[datetime] = ts_col(default=utcnow)

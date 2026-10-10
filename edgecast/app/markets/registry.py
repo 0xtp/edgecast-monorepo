@@ -10,14 +10,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Market, WeatherEvent
-from app.markets.parser import EventSpec, ParseError, _dt, parse_event
+from app.markets.parser import EventSpec, ParseError, UnknownStation, _dt, parse_event
 from app.polymarket.clob import Clob
 
 log = logging.getLogger(__name__)
 FEE_REFRESH = timedelta(hours=6)
 
 
-def upsert_event(session: Session, raw: dict[str, Any]) -> WeatherEvent:
+def upsert_event(session: Session, raw: dict[str, Any], resolver: Any = None) -> WeatherEvent:
     """Parse and store one Gamma event. Unparseable events are stored as UNPARSED, never traded."""
     event_id = str(raw.get("id"))
     ev = session.get(WeatherEvent, event_id)
@@ -30,7 +30,16 @@ def upsert_event(session: Session, raw: dict[str, Any]) -> WeatherEvent:
     ev.closed = bool(raw.get("closed"))
     ev.raw = raw
     try:
-        spec = parse_event(raw)
+        try:
+            spec = parse_event(raw)
+        except UnknownStation as us:
+            if resolver is None:
+                raise
+            try:
+                resolver.resolve(session, us.icao, us.city)
+            except Exception as e:
+                raise ParseError(f"station {us.icao} unknown and could not be resolved: {e}") from e
+            spec = parse_event(raw)
     except ParseError as e:
         ev.parse_status, ev.parse_error = "UNPARSED", str(e)
         log.info("UNPARSED %s: %s", ev.slug, e)
@@ -98,10 +107,10 @@ def refresh_fees(session: Session, clob: Clob, *, now: datetime | None = None) -
     return n
 
 
-def sync(session: Session, events: list[dict[str, Any]]) -> tuple[int, int]:
+def sync(session: Session, events: list[dict[str, Any]], resolver: Any = None) -> tuple[int, int]:
     parsed = unparsed = 0
     for raw in events:
-        ev = upsert_event(session, raw)
+        ev = upsert_event(session, raw, resolver)
         if ev.parse_status == "PARSED":
             parsed += 1
         else:

@@ -5,22 +5,19 @@
 Built and tested end to end on synthetic fixtures. The live data sources were unreachable from the build
 environment, so the live-verification steps in the README ("What is verified, and what is not") are still yours to run.
 
-The open questions were not answered before the build. These defaults were used, and each is easy to change:
+Decisions (answered after the first build):
 
-| Question | Default used | Where to change |
+| Question | Decision | Where |
 |---|---|---|
-| VPS / region | Any 2 vCPU / 2–4 GB host; AWS eu-west-1 recommended | README → Deployment |
-| Domain | `PUBLIC_DOMAIN` env; Caddy issues HTTPS automatically | `.env` |
-| Telegram | Built and fully tested; off until `TELEGRAM_ENABLED=true` | `.env` |
-| Bankroll / caps | Values from the brief ($200 bot, $200 manual, caps as listed) | `.env`, runtime overrides |
-| Wallet type | Plain EOA (SDK auto-detects; proxy/safe via `POLY_FUNDER_ADDRESS`) | `.env` |
-| Cities | All parsable cities with a curated station (50 stations) | `CITY_ALLOWLIST`, `stations.yaml` |
-| Time zone | `TZ=UTC` | `.env` |
-| SDK | `polymarket-client==0.13.0` (official unified SDK), pinned, behind an adapter | `pyproject.toml`, `app/execution/live.py` |
-
-
-Phase 0 deliverable. Covers what the current Polymarket and Open-Meteo stack actually looks like,
-the architecture, the probability model, and the open questions that block the build.
+| VPS / region | AWS Lightsail in eu-west-1 (Ireland), 2 GB / 2 vCPU; Hetzner Helsinki only if its geoblock check passes | README → Deployment |
+| Domain | Not required: `<ip>.sslip.io` gets a real certificate via Caddy; own domain optional. The dashboard runs on the VPS, not Vercel | `PUBLIC_DOMAIN` |
+| Telegram | Yes, built and tested; ships off (`TELEGRAM_ENABLED=false`) until SCAN/PAPER are verified | `.env` |
+| Bankroll / caps | $200 bot, $200 manual, caps as in the brief | `.env`, runtime overrides |
+| Wallet | Fresh plain EOA (`POLY_FUNDER_ADDRESS` empty) | `.env` |
+| Cities | Every city Polymarket lists: 50 curated stations plus automatic resolution of any new station | `AUTO_RESOLVE_STATIONS`, `CITY_ALLOWLIST`/`BLOCKLIST` |
+| Time zone | `Asia/Kolkata` (GMT+5:30); quiet hours off | `.env` |
+| Layout | Project lives in `edgecast/` inside `edgecast-monorepo` | repo |
+| SDK | `polymarket-client==0.13.0` (official), pinned, behind an adapter | `pyproject.toml` |
 
 ## 1. What the research found (and how)
 
@@ -169,7 +166,7 @@ fixtures only.
 `gamma-api.polymarket.com`, `clob.polymarket.com`, `data-api.polymarket.com`, `polymarket.com`,
 `ensemble-api.open-meteo.com`, `previous-runs-api.open-meteo.com` (*hostname unverified*),
 `single-runs-api.open-meteo.com`, `historical-forecast-api.open-meteo.com`, `archive-api.open-meteo.com`,
-`api.weather.gov`, `mesonet.agron.iastate.edu`, `api.telegram.org`, a Polygon RPC, `www.clevelandfed.org`.
+`api.weather.gov`, `mesonet.agron.iastate.edu`, `aviationweather.gov`, `api.telegram.org`, a Polygon RPC, `www.clevelandfed.org`.
 
 ## 8. Risks and unknowns
 

@@ -1,20 +1,8 @@
-.env
-.env.*
-!.env.example
+# Repo-wide safety net; project-specific rules live in edgecast/.gitignore
+.venv/
+**/.env
+**/.env.*
+!**/.env.example
+**/secrets/
 *.key
 *.pem
-secrets/
-data/
-__pycache__/
-*.pyc
-.venv/
-.mypy_cache/
-.pytest_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-KILL
-backtest/cache/
-backtest/reports/*.html
-backtest/reports/*.json
-coverage.xml

@@ -71,6 +71,14 @@ class ParseError(ValueError):
     """The market cannot be parsed with high confidence."""
 
 
+class UnknownStation(ParseError):
+    """The resolution station is not known yet; the registry may resolve it and retry."""
+
+    def __init__(self, icao: str, city: str):
+        super().__init__(f"station {icao} is not known (curated or resolved)")
+        self.icao, self.city = icao, city
+
+
 @dataclass(frozen=True)
 class Station:
     icao: str
@@ -155,8 +163,20 @@ class EventSpec:
 
 
 # --------------------------------------------------------------------------- stations
+_RESOLVED: dict[str, Station] = {}
+
+
+def register_stations(stations: dict[str, Station]) -> None:
+    """Add stations resolved at runtime (from the DB). Curated entries always take precedence."""
+    _RESOLVED.update(stations)
+
+
+def load_stations() -> dict[str, Station]:
+    return {**_RESOLVED, **curated_stations()}
+
+
 @lru_cache(maxsize=1)
-def load_stations(path: Path = STATIONS_PATH) -> dict[str, Station]:
+def curated_stations(path: Path = STATIONS_PATH) -> dict[str, Station]:
     raw = yaml.safe_load(path.read_text())
     return {
         icao: Station(
@@ -253,6 +273,11 @@ def _icao_from_url(url: str) -> str | None:
     return None
 
 
+def _mentions(text: str, alias: str) -> bool:
+    """Whole-word/phrase match ("national airport" must not match "international airport")."""
+    return bool(alias) and re.search(rf"(?<![\w]){re.escape(alias)}(?![\w])", text) is not None
+
+
 def _source_kind(url: str, rules: str) -> str:
     host = urlparse(url).netloc.lower() if url else ""
     if "wunderground" in host:
@@ -317,10 +342,10 @@ def parse_event(event: dict[str, Any]) -> EventSpec:
     stations = load_stations()
     station = stations.get(icao)
     if station is None:
-        raise ParseError(f"station {icao} is not in stations.yaml")
+        raise UnknownStation(icao, normalise_city(tm.group("city")))
     rules_low = rules.lower()
     # The station named in the rules must be this one, and no other curated station may be named.
-    named = {s.icao for s in stations.values() if any(a in rules_low for a in s.aliases)}
+    named = {s.icao for s in stations.values() if any(_mentions(rules_low, a) for a in s.aliases)}
     if named and named != {icao}:
         raise ParseError(f"rules name station(s) {sorted(named)} but source points to {icao}")
     source_kind = _source_kind(source_url or next(iter(URL_RE.findall(rules)), ""), rules)

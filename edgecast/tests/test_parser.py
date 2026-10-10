@@ -251,3 +251,33 @@ def test_recorded_events_parse_or_refuse_cleanly():
             except ParseError:
                 continue
             assert spec.markets and spec.unit in ("F", "C")
+
+
+def test_alias_match_is_whole_word():
+    """Regression: 'national airport' (KDCA) must not match '... International Airport' in other cities' rules."""
+    ev = make_event(
+        "10",
+        title="Highest temperature in Miami on October 12?",
+        labels=f_labels(80, 89),
+        station="Miami International Airport Station",
+        icao="KMIA",
+        source_url="https://www.wunderground.com/history/daily/us/fl/miami/KMIA",
+        unit="F",
+        local_date=D,
+    )
+    assert parse_event(ev).station.icao == "KMIA"
+
+
+def test_no_alias_names_another_curated_station():
+    from app.markets.parser import _mentions, curated_stations
+
+    st = curated_stations()
+    clashes = [
+        (a.icao, al, b.icao)
+        for a in st.values()
+        for b in st.values()
+        if a.icao != b.icao
+        for al in a.aliases
+        if _mentions(f"{b.name} station".lower(), al)
+    ]
+    assert clashes == []

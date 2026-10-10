@@ -99,6 +99,8 @@ class Settings(BaseSettings):
     OPEN_METEO_HISTORICAL_FORECAST_BASE: str = "https://historical-forecast-api.open-meteo.com"
     IEM_BASE: str = "https://mesonet.agron.iastate.edu"
     NWS_BASE: str = "https://api.weather.gov"
+    AWC_BASE: str = "https://aviationweather.gov"
+    AUTO_RESOLVE_STATIONS: bool = True
     NWS_USER_AGENT: str = "edgecast (you@example.com)"
 
     # --- Polymarket ---

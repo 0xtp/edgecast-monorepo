@@ -22,6 +22,7 @@ from app.db.models import (
     OrderIntent,
     Position,
     Prediction,
+    ResolvedStation,
     Signal,
     StationBias,
     WeatherEvent,
@@ -129,7 +130,9 @@ def signals(
     rows = []
     now = datetime.now(UTC)
     from app.markets.parser import load_stations
+    from app.markets.stations import load_db_stations
 
+    load_db_stations(s)
     stations = load_stations()
     for sig in s.scalars(q.limit(400)):
         ev = sig.market.event
@@ -242,6 +245,7 @@ def model_page(s: Session, settings: Settings) -> dict[str, Any]:
         "signal_roi": roi,
         "unparsed": unparsed,
         "parsed_n": parsed_n,
+        "resolved_stations": s.scalars(select(ResolvedStation).order_by(ResolvedStation.resolved_at.desc())).all(),
         "last_bias_fit": get_state(s, "last_bias_fit"),
     }
 

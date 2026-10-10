@@ -42,6 +42,7 @@ from app.forecast.openmeteo import FAMILIES, OpenMeteo
 from app.http import API_HEALTH
 from app.markets import registry
 from app.markets.parser import load_stations
+from app.markets.stations import StationResolver, load_db_stations
 from app.models.weather_prob import BucketProbs, FamilyInput, bucket_probabilities, lead_day_for
 from app.polymarket.clob import Clob, OrderBook
 from app.polymarket.data_api import DataApi
@@ -80,6 +81,7 @@ class Clients:
     openmeteo: OpenMeteo
     iem: Iem
     nws: Nws
+    stations: Any = None  # StationResolver; None disables auto-resolution of unknown stations
 
     @classmethod
     def from_settings(cls, s: Settings) -> Clients:
@@ -90,6 +92,7 @@ class Clients:
             openmeteo=OpenMeteo(s.OPEN_METEO_BASE, s.OPEN_METEO_PREVIOUS_RUNS_BASE, s.OPEN_METEO_SINGLE_RUNS_BASE),
             iem=Iem(s.IEM_BASE),
             nws=Nws(s.NWS_BASE, s.NWS_USER_AGENT),
+            stations=StationResolver(s.AWC_BASE, s.OPEN_METEO_BASE) if s.AUTO_RESOLVE_STATIONS else None,
         )
 
 
@@ -226,7 +229,8 @@ class Engine:
         live = self.c.gamma.weather_events(closed=False)
         recent_closed = self.c.gamma.weather_events(closed=True, max_pages=2)
         with self.sessions() as s:
-            parsed, unparsed = registry.sync(s, live + recent_closed)
+            load_db_stations(s)
+            parsed, unparsed = registry.sync(s, live + recent_closed, self.c.stations)
             registry.refresh_fees(s, self.c.clob)
             set_state(s, "last_market_sync", datetime.now(UTC).isoformat())
             s.commit()
@@ -1231,6 +1235,7 @@ class Engine:
 
     def startup(self) -> None:
         with self.sessions() as s:
+            load_db_stations(s)
             mode = current_mode(s, self.settings)
             if self.settings.MODE_FORCE_ENV or get_state(s, "mode") is None:
                 set_state(s, "mode", mode.value)
