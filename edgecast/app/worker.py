@@ -73,6 +73,7 @@ class Worker:
     def live_upkeep(self) -> None:
         if self._mode() == Mode.LIVE:
             self.engine.reconcile_live()
+            self.engine.sync_live_balance()
 
     def forecasts_then_strategy(self) -> None:
         self.engine.refresh_forecasts()

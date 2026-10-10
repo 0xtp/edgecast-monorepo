@@ -1,143 +1,177 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Overview · Edgecast{% endblock %}
 {% block head %}<link rel="stylesheet" href="/static/css/uplot.min.css"><script src="/static/js/uplot.min.js" defer></script>{% endblock %}
 {% block content %}
-<div class="grid gap-4 lg:grid-cols-3">
-  <!-- Mode + controls -->
-  <section class="card lg:col-span-2" x-data="{dlg: '', target: '', phrase: ''}">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h2 class="card-title">Mode</h2>
-        <div class="seg mt-2" role="radiogroup" aria-label="Trading mode">
-          {% for m in ["SCAN", "PAPER", "LIVE"] %}
-          <button type="button" role="radio" aria-checked="{{ 'true' if hdr.mode == m else 'false' }}"
-                  class="seg-btn {{ 'seg-on' if hdr.mode == m }}" {% if hdr.mode_forced %}disabled{% endif %}
-                  @click="target='{{ m }}'; dlg = ('{{ m }}' === '{{ hdr.mode }}') ? '' : ('{{ m }}' === 'LIVE' ? 'live' : ('{{ hdr.mode }}' === 'LIVE' ? 'leave' : 'plain'))">{{ m }}</button>
-          {% endfor %}
-        </div>
-        <p class="mt-2 text-xs text-zinc-500">
-          {% if hdr.mode == "SCAN" %}Signals only — no orders, no key needed.{% elif hdr.mode == "PAPER" %}Simulated fills against the live book · PAPER day {{ "%.1f"|format(paper_days) }} of {{ paper_min_days }} suggested.{% else %}Real orders with real money.{% endif %}
-          {% if hdr.mode_forced %} Pinned by MODE_FORCE_ENV.{% endif %}
-        </p>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        {% if hdr.paused or hdr.halted %}
-        <button class="btn btn-accent" hx-post="/action/resume" hx-target="#toast" hx-confirm="Resume trading? This clears the halt/pause.">▶ Resume</button>
-        {% else %}
-        <button class="btn" hx-post="/action/pause" hx-target="#toast" hx-confirm="Pause new entries? Exits continue.">⏸ Pause</button>
-        {% endif %}
-        <button class="btn btn-danger" hx-post="/action/kill" hx-target="#toast" hx-confirm="KILL SWITCH: cancel all open orders and halt trading?">■ Kill switch</button>
-      </div>
-    </div>
-
-    <!-- plain switch -->
-    <template x-if="dlg === 'plain'">
-      <div class="mt-4 rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-sm">
-        Switch to <b x-text="target"></b>?
-        <form class="mt-2 flex gap-2" hx-post="/action/mode" hx-target="#toast">
-          <input type="hidden" name="target" :value="target">
-          <button class="btn btn-accent btn-sm">Switch</button>
-          <button type="button" class="btn btn-sm" @click="dlg=''">Cancel</button>
-        </form>
-      </div>
-    </template>
-    <!-- into LIVE -->
-    <template x-if="dlg === 'live'">
-      <div class="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
-        <p class="font-semibold text-amber-100">Switch to LIVE — real money</p>
-        {% if live_errors %}<ul class="mt-2 list-disc pl-5 text-rose-300">{% for e in live_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-        {% if live_warnings %}<ul class="mt-2 list-disc pl-5 text-amber-200">{% for w in live_warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
-        <form class="mt-3 flex flex-wrap items-center gap-2" hx-post="/action/mode" hx-target="#toast">
-          <input type="hidden" name="target" value="LIVE">
-          <input name="confirm_text" x-model="phrase" class="input max-w-[14rem]" placeholder="Type CONFIRM LIVE" autocomplete="off">
-          <button class="btn btn-danger btn-sm" :disabled="phrase !== 'CONFIRM LIVE'" {% if live_errors %}disabled{% endif %}>Go LIVE</button>
-          <button type="button" class="btn btn-sm" @click="dlg=''; phrase=''">Cancel</button>
-        </form>
-      </div>
-    </template>
-    <!-- out of LIVE -->
-    <template x-if="dlg === 'leave'">
-      <div class="mt-4 rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-sm">
-        <p>Leaving LIVE for <b x-text="target"></b>. New orders stop immediately. What about open orders and positions?</p>
-        <div class="mt-3 flex flex-wrap gap-2">
-          {% for val, label in [("0:0","Keep orders · hold positions"),("1:0","Cancel orders · hold positions"),("1:1","Cancel orders · close positions")] %}
-          <form hx-post="/action/mode" hx-target="#toast">
-            <input type="hidden" name="target" :value="target"><input type="hidden" name="live_exit" value="{{ val }}">
-            <button class="btn btn-sm">{{ label }}</button>
-          </form>
-          {% endfor %}
-          <button type="button" class="btn btn-ghost btn-sm" @click="dlg=''">Cancel</button>
-        </div>
-      </div>
-    </template>
-  </section>
-
-  <section class="card">
-    <h2 class="card-title">Status</h2>
-    <dl class="mt-2 space-y-1.5 text-sm">
-      <div class="flex justify-between"><dt class="text-zinc-400">Trading</dt><dd>{% if hdr.halted %}<span class="text-rose-300">Halted</span>{% elif hdr.paused %}<span class="text-amber-200">Paused</span>{% else %}Running{% endif %}</dd></div>
-      <div class="flex justify-between"><dt class="text-zinc-400">Geoblock</dt><dd>{% if hdr.geoblocked %}<span class="text-rose-300">Blocked</span>{% elif hdr.geoblocked is none %}Unknown{% else %}OK{% endif %}</dd></div>
-      <div class="flex justify-between"><dt class="text-zinc-400">Worker</dt><dd>{{ hdr.worker_ts|ago }}</dd></div>
-      <div class="flex justify-between"><dt class="text-zinc-400">Active signals</dt><dd><a href="/signals">{{ active_signals }}</a></dd></div>
-    </dl>
-  </section>
+<div x-data="{dlg: '', target: '', phrase: ''}">
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <h1 class="page-title">Overview</h1>
+    <p class="page-sub">Live state of the bot and your manual track. {{ active_signals }} active signal{{ '' if active_signals == 1 else 's' }}.</p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    {% if hdr.paused or hdr.halted %}
+    <button class="btn" hx-post="/action/resume" hx-target="#toast" hx-confirm="Resume trading? This clears the halt/pause.">{{ icon("play", "h-4 w-4") }} Resume</button>
+    {% else %}
+    <button class="btn" hx-post="/action/pause" hx-target="#toast" hx-confirm="Pause new entries? Exits continue.">{{ icon("pause", "h-4 w-4") }} Pause</button>
+    {% endif %}
+    <button class="btn btn-danger" hx-post="/action/kill" hx-target="#toast" hx-confirm="KILL SWITCH: cancel all open orders and halt trading?">{{ icon("power", "h-4 w-4") }} Kill switch</button>
+    <a class="btn btn-primary" href="/signals">{{ icon("target", "h-4 w-4") }} View signals</a>
+  </div>
 </div>
 
-<!-- P&L cards -->
-<div class="mt-4 grid gap-4 md:grid-cols-2">
-  {% for label, c in [("Bot · " ~ bot_book, bot), ("Manual", cards.MANUAL)] %}
-  <section class="card">
-    <div class="flex items-baseline justify-between"><h2 class="card-title">{{ label }}</h2>{% if c %}<span class="text-xs text-zinc-500">{{ c.open }} open</span>{% endif %}</div>
-    {% if c %}
-    <div class="mt-2 grid grid-cols-2 gap-4 sm:grid-cols-4">
-      <div><p class="text-xs text-zinc-400">Bankroll</p><p class="kpi">{{ c.equity|usd }}</p></div>
-      <div><p class="text-xs text-zinc-400">Today</p><p class="kpi {{ c.today|pnl }}">{{ c.today|usd(True) }}</p></div>
-      <div><p class="text-xs text-zinc-400">Total P&amp;L</p><p class="kpi {{ c.total|pnl }}">{{ c.total|usd(True) }}</p></div>
-      <div><p class="text-xs text-zinc-400">Open exposure</p><p class="kpi">{{ c.exposure|usd }}</p></div>
+<!-- Mode -->
+<section class="card mt-6">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <div class="tile {{ 'tile-red' if hdr.mode == 'LIVE' else 'tile-blue' if hdr.mode == 'PAPER' else 'tile-navy' }}">{{ icon("activity", "h-6 w-6") }}</div>
+      <div>
+        <h2 class="text-base font-semibold text-gray-900">Trading mode</h2>
+        <p class="text-sm text-gray-500">
+          {% if hdr.mode == "SCAN" %}Signals only: no orders, no key needed.{% elif hdr.mode == "PAPER" %}Simulated fills against the live order book · day {{ "%.1f"|format(paper_days) }} of {{ paper_min_days }} suggested.{% else %}Real orders with real money.{% endif %}
+          {% if hdr.mode_forced %}Pinned by MODE_FORCE_ENV.{% endif %}
+        </p>
+      </div>
     </div>
-    {% else %}<p class="mt-3 text-sm text-zinc-500">No activity on this track yet.</p>{% endif %}
+    <div class="seg" role="radiogroup" aria-label="Trading mode">
+      {% for m in ["SCAN", "PAPER", "LIVE"] %}
+      <button type="button" role="radio" aria-checked="{{ 'true' if hdr.mode == m else 'false' }}" class="seg-btn {{ 'seg-on' if hdr.mode == m }}" {% if hdr.mode_forced %}disabled{% endif %}
+        @click="target='{{ m }}'; dlg = ('{{ m }}' === '{{ hdr.mode }}') ? '' : ('{{ m }}' === 'LIVE' ? 'live' : ('{{ hdr.mode }}' === 'LIVE' ? 'leave' : 'plain'))">{{ m|title }}</button>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Mode dialogs (two-pane modal like the template composer) -->
+<template x-if="dlg">
+  <div>
+    <div class="modal-backdrop" @click="dlg=''; phrase=''"></div>
+    <div class="modal max-w-2xl" role="dialog" aria-modal="true">
+      <div class="flex items-start justify-between border-b border-gray-200 px-6 py-5">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900" x-text="dlg === 'live' ? 'Switch to LIVE trading' : (dlg === 'leave' ? 'Leave LIVE trading' : 'Switch to ' + target.charAt(0) + target.slice(1).toLowerCase())"></h3>
+          <p class="text-sm text-gray-500" x-text="dlg === 'live' ? 'Real orders with real money from the bot wallet.' : (dlg === 'leave' ? 'New orders stop immediately. Choose what happens to open orders and positions.' : 'You can switch back at any time.')"></p>
+        </div>
+        <button class="btn btn-ghost btn-icon -mr-2" @click="dlg=''; phrase=''" aria-label="Close">{{ icon("x", "h-5 w-5") }}</button>
+      </div>
+      <div class="px-6 py-5">
+        <template x-if="dlg === 'live'">
+          <div class="space-y-3">
+            {% if live_errors %}<div class="rounded-lg bg-red-50 p-3 text-sm text-red-700 ring-1 ring-inset ring-red-200"><p class="font-semibold">Blocked</p><ul class="mt-1 list-disc pl-5">{% for e in live_errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+            {% if live_warnings %}<div class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 ring-1 ring-inset ring-amber-200"><ul class="list-disc pl-5">{% for w in live_warnings %}<li>{{ w }}</li>{% endfor %}</ul></div>{% endif %}
+            <label class="block"><span class="label">Type <code class="!text-xs !text-gray-700">CONFIRM LIVE</code> to continue</span>
+              <input x-model="phrase" class="input" placeholder="CONFIRM LIVE" autocomplete="off" {% if live_errors %}disabled{% endif %}></label>
+          </div>
+        </template>
+        <template x-if="dlg === 'leave'">
+          <div class="grid gap-2 sm:grid-cols-3">
+            {% for val, t, d in [("0:0","Keep everything","Open orders stay; positions held"),("1:0","Cancel orders","Positions held to resolution"),("1:1","Cancel & close","Cancel orders, sell positions at the bid")] %}
+            <form hx-post="/action/mode" hx-target="#toast" class="contents">
+              <input type="hidden" name="target" :value="target"><input type="hidden" name="live_exit" value="{{ val }}">
+              <button class="card card-hover p-4 text-left"><p class="text-sm font-semibold text-gray-900">{{ t }}</p><p class="mt-1 text-xs text-gray-500">{{ d }}</p></button>
+            </form>
+            {% endfor %}
+          </div>
+        </template>
+        <template x-if="dlg === 'plain'"><p class="text-sm text-gray-600">Mode changes take effect on the next worker cycle (a few seconds) and are recorded in the audit log.</p></template>
+      </div>
+      <div class="flex justify-end gap-2 border-t border-gray-200 bg-gray-50/60 px-6 py-4">
+        <button class="btn" @click="dlg=''; phrase=''">Cancel</button>
+        <template x-if="dlg === 'plain'">
+          <form hx-post="/action/mode" hx-target="#toast"><input type="hidden" name="target" :value="target"><button class="btn btn-primary">{{ icon("check", "h-4 w-4") }} Switch</button></form>
+        </template>
+        <template x-if="dlg === 'live'">
+          <form hx-post="/action/mode" hx-target="#toast"><input type="hidden" name="target" value="LIVE"><input type="hidden" name="confirm_text" :value="phrase">
+            <button class="btn btn-danger-solid" :disabled="phrase !== 'CONFIRM LIVE'">{{ icon("send", "h-4 w-4") }} Go live</button></form>
+        </template>
+      </div>
+    </div>
+  </div>
+</template>
+</div>
+
+<!-- KPI cards -->
+<div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  {% set c = bot %}
+  {% for title, value, cls, ic, tile, badge, sub in [
+      ("Bankroll", (c.equity|usd) if c else "—", "", "wallet", "tile-navy", "Bot · " ~ bot_book, (c.cash|usd ~ " cash") if c else "No bot activity yet"),
+      ("Today", (c.today|usd(True)) if c else "—", (c.today|pnl) if c else "", "trending-up" if c and c.today >= 0 else "trending-down", "tile-green" if c and c.today >= 0 else "tile-red", "Realised", "Resets at midnight IST"),
+      ("Total P&L", (c.total|usd(True)) if c else "—", (c.total|pnl) if c else "", "chart", "tile-blue", "Since start", ((c.realized|usd(True)) ~ " realised") if c else ""),
+      ("Open exposure", (c.exposure|usd) if c else "—", "", "briefcase", "tile-amber", (c.open ~ " open") if c else "0 open", "Includes resting orders"),
+    ] %}
+  <section class="card card-hover">
+    <div class="flex items-start justify-between"><div class="tile {{ tile }}">{{ icon(ic, "h-6 w-6") }}</div><span class="badge badge-blue">{{ badge }}</span></div>
+    <p class="mt-4 text-sm font-medium text-gray-500">{{ title }}</p>
+    <p class="kpi {{ cls }}">{{ value }}</p>
+    <p class="mt-1 text-xs text-gray-500">{{ sub }}</p>
   </section>
   {% endfor %}
 </div>
 
-<!-- Exposure vs caps -->
-{% if exposure %}
-<section class="card mt-4">
-  <h2 class="card-title">Exposure vs caps ({{ bot_book }})</h2>
-  <div class="mt-3 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-5">
-    {% for name, val, cap in exposure %}
-    {% set frac = (val / cap) if cap else 0 %}
-    <div>
-      <div class="flex justify-between text-xs"><span class="text-zinc-400">{{ name }}</span>
-        <span class="tabular-nums {{ 'text-amber-200' if frac >= 0.8 else 'text-zinc-300' }}">{% if '%' in name %}{{ "%.1f"|format(val) }}% / {{ cap|round(1) }}%{% else %}{{ val|usd }} / {{ cap|usd }}{% endif %}</span></div>
-      <div class="bar mt-1.5" role="progressbar" aria-valuenow="{{ (100*frac)|round|int }}" aria-valuemin="0" aria-valuemax="100"><span style="width: {{ [100*frac, 100]|min }}%" class="{{ '!bg-amber-400' if frac >= 0.8 }}"></span></div>
+<div class="mt-4 grid gap-4 lg:grid-cols-3">
+  <!-- Manual track -->
+  <section class="card card-hover">
+    <div class="flex items-start justify-between"><div class="tile tile-green">{{ icon("user", "h-6 w-6") }}</div><span class="badge badge-green">Manual</span></div>
+    <h2 class="mt-4 text-base font-semibold text-gray-900">Manual trades</h2>
+    {% if cards.MANUAL %}{% set m = cards.MANUAL %}
+    <dl class="mt-2 space-y-1.5 text-sm">
+      <div class="flex justify-between"><dt class="text-gray-500">Bankroll</dt><dd class="font-medium tabular-nums">{{ m.equity|usd }}</dd></div>
+      <div class="flex justify-between"><dt class="text-gray-500">Total P&amp;L</dt><dd class="font-medium tabular-nums {{ m.total|pnl }}">{{ m.total|usd(True) }}</dd></div>
+      <div class="flex justify-between"><dt class="text-gray-500">Open positions</dt><dd class="font-medium">{{ m.open }}</dd></div>
+    </dl>
+    {% else %}<p class="mt-1 text-sm text-gray-500">Trades you log with “I took this” appear here, kept separate from the bot.</p>{% endif %}
+  </section>
+
+  <!-- Status -->
+  <section class="card card-hover">
+    <div class="flex items-start justify-between"><div class="tile {{ 'tile-red' if hdr.geoblocked or hdr.halted else 'tile-blue' }}">{{ icon("shield", "h-6 w-6") }}</div>
+      <span class="badge {{ 'badge-red' if hdr.halted else 'badge-amber' if hdr.paused else 'badge-green' }}">{{ 'Halted' if hdr.halted else 'Paused' if hdr.paused else 'Running' }}</span></div>
+    <h2 class="mt-4 text-base font-semibold text-gray-900">Safety</h2>
+    <dl class="mt-2 space-y-1.5 text-sm">
+      <div class="flex justify-between"><dt class="text-gray-500">Geoblock</dt><dd class="font-medium {{ 'text-red-600' if hdr.geoblocked }}">{% if hdr.geoblocked %}Blocked{% elif hdr.geoblocked is none %}Unknown{% else %}Clear{% endif %}</dd></div>
+      <div class="flex justify-between"><dt class="text-gray-500">Worker</dt><dd class="font-medium">{{ hdr.worker_ts|ago }}</dd></div>
+      <div class="flex justify-between"><dt class="text-gray-500">Signals</dt><dd><a href="/signals" class="font-medium">{{ active_signals }} active</a></dd></div>
+    </dl>
+  </section>
+
+  <!-- Exposure vs caps -->
+  <section class="card">
+    <h2 class="card-title">Exposure vs caps · {{ bot_book }}</h2>
+    {% if exposure %}
+    <div class="mt-4 space-y-3">
+      {% for name, val, cap in exposure %}{% set frac = (val / cap) if cap else 0 %}
+      <div>
+        <div class="flex justify-between text-xs"><span class="text-gray-600">{{ name }}</span>
+          <span class="tabular-nums {{ 'font-semibold text-amber-700' if frac >= 0.8 else 'text-gray-500' }}">{% if '%' in name %}{{ "%.1f"|format(val) }}% / {{ cap|round(1) }}%{% else %}{{ val|usd }} / {{ cap|usd }}{% endif %}</span></div>
+        <div class="bar mt-1.5" role="progressbar" aria-label="{{ name }}" aria-valuenow="{{ (100*frac)|round|int }}" aria-valuemin="0" aria-valuemax="100"><span style="width: {{ [100*frac, 100]|min }}%" class="{{ '!bg-amber-500' if frac >= 0.8 }}"></span></div>
+      </div>
+      {% endfor %}
     </div>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
+    {% else %}<p class="mt-3 text-sm text-gray-500">No bot exposure yet.</p>{% endif %}
+  </section>
+</div>
 
 <!-- Charts -->
 <div class="mt-4 grid gap-4 lg:grid-cols-3">
   <section class="card lg:col-span-2">
-    <h2 class="card-title">Equity</h2>
-    <div id="equity" class="mt-2"></div>
-    <details class="mt-2 text-xs text-zinc-400"><summary class="cursor-pointer">Data table</summary>
+    <div class="flex items-center justify-between"><h2 class="card-title">Equity</h2><span class="text-xs text-gray-400">last 60 days</span></div>
+    <div id="equity" class="mt-3"></div>
+    <details class="mt-2 text-xs text-gray-500"><summary class="cursor-pointer">Data table</summary>
       <table class="tbl mt-2"><thead><tr><th>Book</th><th>Points</th><th class="num">Latest</th></tr></thead><tbody>
       {% for b, pts in equity_series.items() %}<tr><td>{{ b }}</td><td>{{ pts|length }}</td><td class="num">{{ pts[-1][1]|usd if pts else '—' }}</td></tr>{% endfor %}
       </tbody></table></details>
   </section>
   <section class="card">
-    <h2 class="card-title">Drawdown from peak ({{ bot_book }})</h2>
-    <div id="drawdown" class="mt-2"></div>
+    <h2 class="card-title">Drawdown from peak · {{ bot_book }}</h2>
+    <div id="drawdown" class="mt-3"></div>
   </section>
 </div>
 
 {% if pending_commands %}
-<section class="card mt-4">
-  <h2 class="card-title">Recent commands</h2>
-  <table class="tbl mt-2"><tbody>
-  {% for c in pending_commands %}<tr><td>{{ c.created_at|dt }}</td><td>{{ c.kind }}</td><td>{{ c.source }}</td><td><span class="badge {{ 'badge-warn' if c.status == 'PENDING' else 'badge-muted' }}">{{ c.status }}</span></td><td class="max-w-md truncate text-zinc-400">{{ c.result }}</td></tr>{% endfor %}
+<section class="card mt-4 overflow-x-auto p-0">
+  <h2 class="card-title px-5 pt-5">Recent commands</h2>
+  <table class="tbl mt-3"><tbody>
+  {% for c in pending_commands %}<tr><td>{{ c.created_at|dt }}</td><td class="font-medium text-gray-900">{{ c.kind }}</td><td>{{ c.source }}</td><td><span class="badge {{ 'badge-amber' if c.status == 'PENDING' else 'badge-red' if c.status == 'FAILED' else 'badge-gray' }}">{{ c.status|lower }}</span></td><td class="max-w-md truncate text-gray-500">{{ c.result }}</td></tr>{% endfor %}
   </tbody></table>
 </section>
 {% endif %}
@@ -147,7 +181,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   ecLine(document.getElementById("equity"), {{ equity_series|tojson }});
   ecLine(document.getElementById("drawdown"), {"Drawdown": {{ drawdown_series|tojson }}},
-         {color: "#d95926", height: 220, fmt: (v) => v == null ? "—" : v.toFixed(1) + "%"});
+         {color: "#eb6834", height: 220, fmt: (v) => v == null ? "—" : v.toFixed(1) + "%"});
 });
 </script>
 {% endblock %}

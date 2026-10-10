@@ -390,3 +390,63 @@ def test_live_exits_refused_when_geoblocked(sessions, monkeypatch, env):
     assert len(ex.posted) == 1  # no SELL left the process
     with sessions() as db:
         assert "exit blocked" in db.get(Position, pid).exit_signal_detail
+
+
+class BalanceExchange(FakeExchange):
+    balance = 10.0
+
+    def collateral_balance(self) -> float:
+        return self.balance
+
+
+def test_live_bankroll_seeded_from_wallet_and_reconciled(sessions, monkeypatch, env):
+    monkeypatch.setenv("LIVE_CONFIRM", "I_ACCEPT_LOSSES")
+    monkeypatch.setenv("POLY_PRIVATE_KEY", "0x" + "1" * 64)
+    config_mod.get_settings.cache_clear()
+    s = config_mod.get_settings()
+    ex = BalanceExchange()
+    eng, _ = make_engine(sessions, s, live_client=ex)
+    with sessions() as db:
+        set_state(db, "geoblocked", False)
+        assert control.switch_mode(db, "LIVE", source="UI", confirm_text="CONFIRM LIVE", settings=s).ok
+        db.commit()
+    # Before the balance sync, LIVE places nothing.
+    eng.sync_markets()
+    eng.refresh_forecasts()
+    assert eng.run_strategy()["orders"] == 0
+    with sessions() as db:
+        assert "waiting for the wallet balance sync" in db.scalar(select(Signal)).action
+    # The RECONCILE command queued by the mode switch seeds the bankroll from the wallet.
+    eng.process_commands()
+    with sessions() as db:
+        assert books.deposits(db, "LIVE") == books.to_micros(10.0)
+        assert books.snapshot(db, "LIVE").equity == pytest.approx(10.0)
+    assert eng.sync_live_balance() == "in sync"
+    ex.balance = 9.80  # $0.20 of fees we did not model -> P&L true-up
+    assert eng.sync_live_balance().startswith("adjusted")
+    with sessions() as db:
+        assert books.cash(db, "LIVE") == books.to_micros(9.80)
+        assert books.snapshot(db, "LIVE").realized_total == pytest.approx(-0.20)
+    ex.balance = 59.80  # you sent $50 to the wallet -> deposit, not profit
+    assert eng.sync_live_balance().startswith("deposit")
+    with sessions() as db:
+        assert books.deposits(db, "LIVE") == books.to_micros(60.0)
+        assert books.snapshot(db, "LIVE").total_pnl == pytest.approx(-0.20)
+        assert any("external" in o.text or "differs" in o.text for o in db.scalars(select(Outbox)))
+    # Now entries are allowed and sized on the real bankroll.
+    # $60 with Kelly 0.15 sizes below the 5-share minimum: nothing is placed ...
+    assert eng.run_strategy()["orders"] == 0
+    with sessions() as db:
+        assert "min order" in db.scalar(select(Signal)).action
+        assert control.set_setting(db, "ROUND_UP_TO_MIN_ORDER", "true", source="UI").ok
+        db.commit()
+    # ... unless the operator opts in to rounding up to the exchange minimum (still inside every cap).
+    assert eng.run_strategy()["orders"] == 1
+    with sessions() as db:
+        it = db.scalar(select(OrderIntent))
+        assert it.size == 5
+    # While fills may be settling, the balance check stands down.
+    ex.match(ex.posted[0], ex.orders[ex.posted[0]].original_size)
+    eng.sync_orders()
+    ex.balance = 1.0
+    assert eng.sync_live_balance().startswith("skipped")

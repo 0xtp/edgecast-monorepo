@@ -2,40 +2,42 @@
 <table class="tbl">
   <thead><tr>
     <th>Market</th><th>Bucket</th><th>Action</th><th class="num">Model</th><th class="num">Market</th><th class="num">Edge</th>
-    <th class="num">Max limit</th><th class="num">Stake</th><th>Conf.</th><th class="num">Liquidity</th><th>Resolves</th><th>Bot</th><th></th>
+    <th class="num">Max limit</th><th class="num">Stake</th><th>Confidence</th><th class="num">Liquidity</th><th>Resolves</th><th></th>
   </tr></thead>
   <tbody>
   {% for r in rows %}{% set s = r.sig %}
   {% set details = "BUY " ~ s.outcome ~ " · " ~ r.m.bucket_label ~ " · " ~ r.ev.title ~ " · limit ≤ " ~ "%.2f"|format(s.max_limit_price) ~ " · stake $" ~ "%.2f"|format(s.suggested_stake_usd) ~ " · model " ~ "%.1f"|format(100*s.p_model) ~ "% vs ask " ~ "%.1f"|format(100*s.ask) ~ "% · " ~ r.m.url %}
-  <tr class="{{ 'opacity-50' if s.status != 'ACTIVE' }}" x-data="{took:false}">
-    <td class="max-w-[16rem] truncate"><a href="{{ r.m.url }}" target="_blank" rel="noopener" title="{{ r.ev.title }}">{{ r.ev.city|city }} · {{ r.ev.local_date.strftime('%b %d') }} · {{ 'High' if r.ev.variable == 'max' else 'Low' }}</a>
-      <div class="text-[11px] text-zinc-500">#{{ s.id }} · run {{ s.forecast_run|dt('%d %HZ') }}</div></td>
-    <td>{{ r.m.bucket_label }}</td>
-    <td><span class="badge {{ 'badge-yes' if s.outcome == 'YES' else 'badge-no' }}">BUY {{ s.outcome }}</span>
-      {% if s.status != 'ACTIVE' %}<div class="text-[11px] text-zinc-500">{{ s.status|lower }}: {{ s.expire_reason }}</div>{% endif %}</td>
+  {% set payload = {"id": s.id, "action": "BUY " ~ s.outcome, "outcome": s.outcome, "bucket": r.m.bucket_label, "question": r.ev.title,
+      "city": r.ev.city|city, "model": s.p_model|pct, "market": s.ask|pct, "edge": s.edge|pct, "confidence": {"HIGH": "High", "MED": "Medium", "LOW": "Low"}[s.confidence],
+      "max_limit": "%.2f"|format(s.max_limit_price), "max_limit_raw": s.max_limit_price, "stake": s.suggested_stake_usd|usd,
+      "stake_raw": s.suggested_stake_usd, "resolves": r.hours|hours, "run": s.forecast_run|dt('%d %b %H:%MZ'), "url": r.m.url, "details": details} %}
+  <tr class="{{ 'opacity-50' if s.status != 'ACTIVE' }}">
+    <td class="max-w-[16rem]">
+      <a href="{{ r.m.url }}" target="_blank" rel="noopener" class="font-medium text-gray-900 hover:text-brand-800" title="{{ r.ev.title }}">{{ r.ev.city|city }} · {{ r.ev.local_date.strftime('%b %d') }} · {{ 'High' if r.ev.variable == 'max' else 'Low' }}</a>
+      <div class="text-xs text-gray-400">#{{ s.id }} · run {{ s.forecast_run|dt('%d %H:%MZ') }}</div>
+      {% if s.action %}<div class="mt-0.5 max-w-[15rem] truncate text-xs text-brand-700" title="{{ s.action }}">Bot: {{ s.action }}</div>{% endif %}</td>
+    <td class="font-medium text-gray-900">{{ r.m.bucket_label }}</td>
+    <td><span class="badge {{ 'badge-blue' if s.outcome == 'YES' else 'badge-red' }}">Buy {{ s.outcome|lower }}</span>
+      {% if s.status != 'ACTIVE' %}<div class="mt-1 text-xs text-gray-400">{{ s.status|lower }}: {{ s.expire_reason }}</div>{% endif %}</td>
     <td class="num">{{ s.p_model|pct }}</td>
     <td class="num">{{ s.ask|pct }}</td>
-    <td class="num font-semibold text-zinc-50">{{ s.edge|pct }}</td>
+    <td class="num font-semibold text-brand-900">{{ s.edge|pct }}</td>
     <td class="num">{{ "%.2f"|format(s.max_limit_price) }}</td>
     <td class="num">{{ s.suggested_stake_usd|usd }}</td>
-    <td><span class="badge {{ 'badge-yes' if s.confidence == 'HIGH' else 'badge-muted' if s.confidence == 'LOW' else 'badge-no' }}">{{ s.confidence }}</span></td>
+    <td><span class="badge {{ 'badge-green' if s.confidence == 'HIGH' else 'badge-gray' if s.confidence == 'LOW' else 'badge-navy' }}">{{ {'HIGH': 'High', 'MED': 'Medium', 'LOW': 'Low'}[s.confidence] }}</span></td>
     <td class="num">{{ s.liquidity_usd|usd }}</td>
     <td>{{ r.hours|hours }}</td>
-    <td class="max-w-[12rem] truncate text-xs text-zinc-400" title="{{ s.action }}">{{ s.action or '—' }}</td>
     <td class="text-right">
-      <div class="flex justify-end gap-1">
+      <div class="flex justify-end gap-1.5">
         <button class="btn btn-sm" type="button" onclick="ecCopy({{ details|tojson|forceescape }}, this)">Copy</button>
-        {% if s.status == 'ACTIVE' %}<button class="btn btn-sm" type="button" @click="took=!took">I took this</button>{% endif %}
+        {% if s.status == 'ACTIVE' %}<button class="btn btn-primary btn-sm" type="button" @click='$dispatch("open-ticket", {{ payload|tojson|forceescape }})'>I took this</button>{% endif %}
       </div>
-      <form x-show="took" x-cloak class="mt-2 flex items-center justify-end gap-1" hx-post="/action/took/{{ s.id }}" hx-target="#toast" @htmx:after-request="took=false">
-        <input name="price" type="number" step="0.001" min="0.001" max="0.999" value="{{ '%.2f'|format(s.max_limit_price) }}" class="input w-20 py-1 text-xs" aria-label="Fill price">
-        <input name="usd" type="number" step="0.01" min="0.01" value="{{ '%.2f'|format(s.suggested_stake_usd) }}" class="input w-20 py-1 text-xs" aria-label="USD spent">
-        <button class="btn btn-accent btn-sm">Log</button>
-      </form>
     </td>
   </tr>
   {% else %}
-  <tr><td colspan="13" class="py-10 text-center text-zinc-500">No signals right now{% if mode == 'SCAN' %} — the scanner is watching{% endif %}.</td></tr>
+  <tr><td colspan="12" class="py-16 text-center">
+    <div class="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-blue-50 text-blue-600"><svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
+    <p class="mt-3 font-medium text-gray-900">No signals right now</p><p class="text-sm text-gray-500">{% if mode == 'SCAN' %}The scanner checks every few minutes.{% else %}Nothing clears the minimum edge yet.{% endif %}</p></td></tr>
   {% endfor %}
   </tbody>
 </table>

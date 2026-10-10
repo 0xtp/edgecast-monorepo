@@ -121,6 +121,7 @@ def signals(
     s: Session,
     settings: Settings,
     *,
+    text: str = "",
     confidence: str = "",
     city: str = "",
     min_edge: float = 0.0,
@@ -146,6 +147,8 @@ def signals(
             continue
         if sig.edge < min_edge:
             continue
+        if text and text.lower() not in f"{ev.city} {ev.title} {sig.market.bucket_label}".lower():
+            continue
         st = stations.get(ev.icao)
         hours = (day_end_utc(ev.local_date, st.tz) - now).total_seconds() / 3600 if st and ev.local_date else None
         rows.append({"sig": sig, "m": sig.market, "ev": ev, "hours": hours})
@@ -159,6 +162,7 @@ def signals(
     return {
         "rows": rows,
         "cities": cities,
+        "f_q": text,
         "f_conf": confidence,
         "f_city": city,
         "f_edge": min_edge,

@@ -173,3 +173,21 @@ def test_exits():
     assert (
         decide_exit(p_model=0.4, best_bid=0.2, tp_buffer=0.02, exit_edge=0.03, new_forecast=True).kind == ExitKind.HOLD
     )
+
+
+def test_round_up_to_min_order():
+    kw = dict(
+        p=0.3,
+        price=0.15,
+        fee_per_share=0.0,
+        bankroll=5,
+        kelly_mult=0.15,
+        depth_shares=1000,
+        max_depth_pct=25,
+        min_order_size=5,
+    )
+    assert size_order(**kw, max_stake_usd=10).shares == 0
+    r = size_order(**kw, max_stake_usd=10, round_up_to_min=True)
+    assert r.shares == 5 and r.reason == "rounded up to min order" and r.stake_usd == 0.75
+    assert size_order(**kw, max_stake_usd=0.5, round_up_to_min=True).shares == 0  # min would breach the stake cap
+    assert size_order(**{**kw, "p": 0.1}, max_stake_usd=10, round_up_to_min=True).shares == 0  # no edge, no trade

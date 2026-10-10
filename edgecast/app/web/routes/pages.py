@@ -45,10 +45,12 @@ def overview(request: Request) -> Response:
 
 @router.get("/signals", response_class=HTMLResponse)
 def signals(
-    request: Request, confidence: str = "", city: str = "", min_edge: float = 0.0, partial: int = 0
+    request: Request, confidence: str = "", city: str = "", min_edge: float = 0.0, partial: int = 0, q: str = ""
 ) -> Response:
     with session_scope() as s:
-        ctx = queries.signals(s, get_settings(), confidence=confidence, city=city, min_edge=min_edge / 100)
+        ctx = queries.signals(
+            s, get_settings(), text=q.strip()[:80], confidence=confidence, city=city, min_edge=min_edge / 100
+        )
         if partial:
             return templates.TemplateResponse(
                 request, "partials/signals_table.html", {**ctx, "csrf": csrf_token(request)}

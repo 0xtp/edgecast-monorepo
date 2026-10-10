@@ -1,21 +1,112 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon, logo %}
 {% block title %}Signals · Edgecast{% endblock %}
 {% block content %}
-<div class="flex flex-wrap items-end justify-between gap-3">
+<div x-data="ticket()" @open-ticket.window="open($event.detail)">
+<div class="flex flex-wrap items-end justify-between gap-4">
   <div>
-    <h1 class="text-lg font-semibold text-zinc-50">Signals</h1>
-    <p class="text-sm text-zinc-400">Live opportunities. Edge is after fees at the best ask. Refreshes every 30 s.</p>
+    <h1 class="page-title">Signals</h1>
+    <p class="page-sub">Pick a signal to trade manually or let the bot act on it. Edge is after fees at the best ask · refreshes every 30 s.</p>
   </div>
-  <form id="filters" class="flex flex-wrap items-end gap-2" hx-get="/signals?partial=1" hx-target="#sig-table" hx-trigger="change">
-    <label class="text-xs text-zinc-400">Confidence
-      <select name="confidence" class="input mt-1 w-28"><option value="">All</option>{% for c in ["HIGH","MED","LOW"] %}<option {{ 'selected' if f_conf == c }}>{{ c }}</option>{% endfor %}</select></label>
-    <label class="text-xs text-zinc-400">City
-      <select name="city" class="input mt-1 w-36"><option value="">All</option>{% for c in cities %}<option {{ 'selected' if f_city == c }}>{{ c }}</option>{% endfor %}</select></label>
-    <label class="text-xs text-zinc-400">Min edge %
-      <input name="min_edge" type="number" step="0.5" min="0" value="{{ (100*f_edge)|round(1) }}" class="input mt-1 w-24"></label>
-  </form>
+  <button class="btn btn-primary" hx-post="/action/scan" hx-target="#toast">{{ icon("refresh", "h-4 w-4") }} Scan now</button>
 </div>
+
+<form id="filters" class="mt-6 flex flex-wrap items-center gap-3" hx-get="/signals?partial=1" hx-target="#sig-table" hx-trigger="change, keyup changed delay:400ms from:input[name=q]" x-data="{conf: '{{ f_conf }}'}">
+  <input type="hidden" name="confidence" :value="conf">
+  <div class="seg" role="tablist" aria-label="Confidence">
+    {% for val, label in [("", "All"), ("HIGH", "High"), ("MED", "Medium"), ("LOW", "Low")] %}
+    <button type="button" role="tab" class="seg-btn" :class="conf === '{{ val }}' && 'seg-on'" @click="conf='{{ val }}'; $nextTick(() => htmx.trigger('#filters', 'change'))">{{ label }}</button>
+    {% endfor %}
+  </div>
+  <select name="city" class="input w-44" aria-label="City"><option value="">All cities</option>{% for c in cities %}<option value="{{ c }}" {{ 'selected' if f_city == c }}>{{ c|city }}</option>{% endfor %}</select>
+  <label class="flex items-center gap-2 text-sm text-gray-600">Min edge
+    <input name="min_edge" type="number" step="0.5" min="0" value="{{ (100*f_edge)|round(1) }}" class="input w-20"> %</label>
+  <div class="relative ml-auto">
+    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{{ icon("search", "h-4 w-4") }}</span>
+    <input name="q" value="{{ f_q }}" class="input w-56 pl-9" placeholder="Filter by city or market" aria-label="Filter signals">
+  </div>
+</form>
+
 <div id="sig-table" class="mt-4" hx-get="/signals?partial=1" hx-include="#filters" hx-trigger="every 30s" hx-swap="innerHTML">
   {% include "partials/signals_table.html" %}
 </div>
+
+<!-- Trade ticket modal: form on the left, live preview on the right -->
+<template x-if="s">
+  <div>
+    <div class="modal-backdrop" @click="s=null"></div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ticket-title">
+      <div class="flex items-start justify-between border-b border-gray-200 px-6 py-5">
+        <div><h2 id="ticket-title" class="text-lg font-semibold text-gray-900" x-text="s.action + ' · ' + s.bucket"></h2>
+          <p class="text-sm text-gray-500" x-text="s.question"></p></div>
+        <button class="btn btn-ghost btn-icon -mr-2" @click="s=null" aria-label="Close">{{ icon("x", "h-5 w-5") }}</button>
+      </div>
+      <div class="grid max-h-[calc(100vh-14rem)] overflow-y-auto md:grid-cols-2">
+        <form id="took-form" class="space-y-4 border-gray-200 px-6 py-5 md:border-r" :hx-post="'/action/took/' + s.id" hx-target="#toast" @htmx:after-request="if ($event.detail.successful) s=null" x-init="$nextTick(() => htmx.process($el))">
+          <p class="card-title">Your fill</p>
+          <label class="block"><span class="label">Fill price <code>0–1, e.g. 0.42</code></span>
+            <input name="price" type="number" step="0.001" min="0.001" max="0.999" x-model="price" class="input" required></label>
+          <label class="block"><span class="label">USD spent <code>incl. fees</code></span>
+            <input name="usd" type="number" step="0.01" min="0.01" x-model="usd" class="input" required></label>
+          <div class="rounded-lg bg-gray-50 p-3 text-xs text-gray-600 ring-1 ring-inset ring-gray-200">
+            Logged trades go to the <b>Manual</b> track and get exit alerts (“market caught up” / “forecast flipped”). The bot never trades them.</div>
+          <p class="card-title pt-2">Signal</p>
+          <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+            <dt class="text-gray-500">Model probability</dt><dd class="text-right font-medium" x-text="s.model"></dd>
+            <dt class="text-gray-500">Market (best ask)</dt><dd class="text-right font-medium" x-text="s.market"></dd>
+            <dt class="text-gray-500">Edge after fees</dt><dd class="text-right font-semibold text-brand-900" x-text="s.edge"></dd>
+            <dt class="text-gray-500">Confidence</dt><dd class="text-right font-medium" x-text="s.confidence"></dd>
+          </dl>
+        </form>
+        <div class="bg-gray-50/60 p-5">
+          <div class="rounded-xl border border-gray-200 bg-white">
+            <div class="flex items-center justify-between border-b border-gray-200 px-4 py-2.5 text-sm">
+              <span class="text-gray-600">Live preview</span>
+              <button type="button" class="inline-flex items-center gap-1.5 font-medium text-gray-700 hover:text-gray-900" @click="copy($el)">{{ icon("copy", "h-4 w-4") }} <span>Copy details</span></button>
+            </div>
+            <div class="overflow-hidden rounded-b-xl">
+              <div class="flex items-center gap-2.5 bg-brand-900 px-6 py-5 text-white">{{ logo("h-7 w-7 [&_path]:fill-white") }}<span class="text-xl font-extrabold tracking-tight">EDGECAST</span></div>
+              <div class="px-6 py-5">
+                <span class="chip-status" :class="s.outcome === 'YES' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'" x-text="s.action"></span>
+                <p class="mt-3 text-lg font-semibold text-brand-900" x-text="s.bucket + ' · ' + s.city"></p>
+                <p class="mt-1 text-sm text-gray-600">Place a limit order at or below the max price. Resolves in <span x-text="s.resolves"></span>.</p>
+                <div class="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  <p class="text-xs text-gray-500">Your stake</p>
+                  <p class="text-2xl font-bold text-brand-900" x-text="'$' + (Number(usd) || 0).toFixed(2)"></p>
+                  <div class="my-3 h-px bg-gray-200"></div>
+                  <dl class="space-y-1.5 text-sm">
+                    <div class="flex justify-between"><dt class="text-gray-500">Shares (approx.)</dt><dd class="font-semibold" x-text="shares()"></dd></div>
+                    <div class="flex justify-between"><dt class="text-gray-500">Fill price</dt><dd class="font-semibold" x-text="Number(price).toFixed(3)"></dd></div>
+                    <div class="flex justify-between"><dt class="text-gray-500">Max limit price</dt><dd class="font-semibold" x-text="s.max_limit"></dd></div>
+                    <div class="flex justify-between"><dt class="text-gray-500">Suggested stake</dt><dd class="font-semibold" x-text="s.stake"></dd></div>
+                    <div class="flex justify-between"><dt class="text-gray-500">Payout if right</dt><dd class="font-semibold text-emerald-700" x-text="'$' + payout()"></dd></div>
+                    <div class="flex justify-between"><dt class="text-gray-500">Forecast run</dt><dd class="font-semibold" x-text="s.run"></dd></div>
+                  </dl>
+                </div>
+                <a class="mt-4 inline-flex items-center gap-1.5 text-sm font-medium" :href="s.url" target="_blank" rel="noopener">Open on Polymarket {{ icon("external", "h-4 w-4") }}</a>
+              </div>
+              <div class="flex items-center justify-center gap-3 bg-brand-900 px-6 py-2.5 text-xs font-medium text-white">{{ icon("lock", "h-3.5 w-3.5") }} Model · Edge · Discipline</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+        <a class="btn" :href="s.url" target="_blank" rel="noopener">{{ icon("external", "h-4 w-4") }} Open market</a>
+        <button class="btn btn-primary" type="submit" form="took-form">{{ icon("send", "h-4 w-4") }} Log trade</button>
+      </div>
+    </div>
+  </div>
+</template>
+</div>
+<script>
+function ticket() {
+  return {
+    s: null, price: 0, usd: 0,
+    open(d) { this.s = d; this.price = Number(d.max_limit_raw).toFixed(2); this.usd = Number(d.stake_raw).toFixed(2); },
+    shares() { const p = Number(this.price); return p > 0 ? (Number(this.usd) / p).toFixed(2) : "—"; },
+    payout() { const p = Number(this.price); return p > 0 ? (Number(this.usd) / p).toFixed(2) : "0.00"; },
+    copy(btn) { ecCopy(this.s.details, btn.querySelector("span")); },
+  };
+}
+</script>
 {% endblock %}

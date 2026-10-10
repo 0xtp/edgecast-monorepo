@@ -14,12 +14,15 @@ router = APIRouter(prefix="/action", dependencies=[Depends(require_user), Depend
 
 
 def toast(ok: bool, msg: str, *, refresh: bool = False, needs: str = "") -> Response:
-    color = (
-        "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
-        if ok
-        else "border-amber-500/40 bg-amber-500/10 text-amber-100"
+    accent = "border-l-emerald-500" if ok else "border-l-amber-500"
+    icon = "✓" if ok else "!"
+    tone = "bg-emerald-50 text-emerald-700" if ok else "bg-amber-50 text-amber-700"
+    html = (
+        f'<div class="flex items-start gap-3 rounded-xl border border-gray-200 border-l-4 {accent} bg-white px-4 py-3 '
+        f'text-sm text-gray-800 shadow-pop" data-needs="{needs}">'
+        f'<span class="grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold {tone}">{icon}</span>'
+        f"<span>{escape(msg)}</span></div>"
     )
-    html = f'<div class="rounded-lg border px-3 py-2 text-sm {color}" data-needs="{needs}">{escape(msg)}</div>'
     headers = {"HX-Refresh": "true"} if refresh and ok else {}
     return HTMLResponse(html, headers=headers)
 
@@ -47,6 +50,16 @@ def mode(
             close_positions=close,
         )
     return toast(r.ok, r.message, refresh=True, needs=r.needs)
+
+
+@router.post("/scan")
+def scan_now(request: Request) -> Response:
+    from app.services.state import audit, enqueue
+
+    with session_scope() as s:
+        enqueue(s, "SCAN_NOW", {}, source="UI", actor=actor(request))
+        audit(s, "UI", "SCAN_NOW", "", actor(request))
+    return toast(True, "Scan queued: forecasts and signals refresh within a minute")
 
 
 @router.post("/pause")

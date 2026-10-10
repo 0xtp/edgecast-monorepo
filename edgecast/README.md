@@ -50,6 +50,52 @@ uvicorn --factory app.web.main:create_app --port 8000
 Open http://localhost:8000. The worker syncs markets within seconds, fits station bias on first start (one
 year of history per station; a few minutes), and produces signals after the first forecast pull (~40 s).
 
+## The simple path
+
+If you only want signals, you don't need the dashboard or Telegram:
+
+```bash
+python -m app.cli scan            # fetch markets + forecasts, print today's signals with links
+python -m app.cli scan --json     # same as JSON (cron it, pipe it, or serve it)
+python -m app.cli status          # mode, bankroll and P&L per book
+```
+
+To show the data in your own front-end (e.g. a Vercel app):
+1. Set `API_TOKEN` (24 or more random characters) and `API_CORS_ORIGINS=https://your-app.vercel.app`.
+2. Read these endpoints with the header `Authorization: Bearer <API_TOKEN>`:
+   - `GET /api/v1/status`
+   - `/api/v1/signals`
+   - `/api/v1/positions`
+   - `/api/v1/equity?book=PAPER`
+
+The API is read-only. Keep the token server-side, in a Vercel serverless route rather than browser code.
+
+## Trying LIVE with $10
+
+1. Run SCAN for a few days, then PAPER for a few days. Check that signals and fills look sane.
+2. Create a fresh wallet. Fund it with about $10 of collateral plus about $1 of POL, then run
+   `python scripts/setup_allowances.py`.
+3. Set small caps in `.env` (or on the Settings page):
+   ```
+   MAX_STAKE_PER_ORDER_USD=2
+   MAX_EXPOSURE_PER_MARKET_USD=2
+   MAX_EXPOSURE_PER_CITY_DAY_USD=4
+   MAX_TOTAL_EXPOSURE_USD=8
+   MAX_DAILY_LOSS_USD=5
+   ROUND_UP_TO_MIN_ORDER=true
+   LIVE_CONFIRM=I_ACCEPT_LOSSES
+   POLY_PRIVATE_KEY_FILE=/run/secrets/poly.key
+   ```
+   - Polymarket's minimum order is 5 shares, and Kelly sizing on $10 is far below that.
+   - `ROUND_UP_TO_MIN_ORDER` places the minimum instead, but only when there is an edge and it still fits
+     every cap.
+4. Switch to Live and type `CONFIRM LIVE`.
+   - The first reconcile reads the wallet balance as the LIVE bankroll.
+   - Entries wait until that has happened.
+   - Later balance changes are reconciled automatically: small drift counts as fees; larger changes count as
+     your deposits or withdrawals and send an alert.
+5. Watch History alongside the Polymarket site, and keep the kill switch handy.
+
 ## Modes
 
 | Mode | Orders | Key needed | P&L track |

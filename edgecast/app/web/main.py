@@ -19,7 +19,7 @@ from app.db.models import Heartbeat
 from app.db.session import get_engine, migrate, session_scope
 from app.services.state import get_state, set_state
 from app.web.deps import WEB_DIR, NotAuthenticated
-from app.web.routes import actions, auth, pages
+from app.web.routes import actions, api, auth, pages
 
 log = logging.getLogger("edgecast.web")
 HEARTBEAT_STALE = timedelta(minutes=10)
@@ -77,6 +77,17 @@ def create_app() -> FastAPI:
     app.include_router(auth.router)
     app.include_router(pages.router)
     app.include_router(actions.router)
+    app.include_router(api.router)
+    if s.API_CORS_ORIGINS:
+        from fastapi.middleware.cors import CORSMiddleware
+
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=s.API_CORS_ORIGINS,
+            allow_methods=["GET"],
+            allow_headers=["Authorization"],
+            allow_credentials=False,
+        )
 
     @app.exception_handler(NotAuthenticated)
     async def _login_redirect(request: Request, exc: NotAuthenticated) -> Response:

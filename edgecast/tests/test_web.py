@@ -123,6 +123,6 @@ def test_session_secret_required(env, monkeypatch):
 def test_filters():
     assert deps.fmt_usd(-3.5) == "-$3.50" and deps.fmt_usd(2, signed=True) == "+$2.00" and deps.fmt_usd(None) == "—"
     assert deps.fmt_pct(0.123) == "12.3%" and deps.fmt_pct(0.1, 0, True) == "+10%"
-    assert deps.pnl_class(1) == "text-emerald-400" and deps.pnl_class(-1) == "text-rose-400"
+    assert deps.pnl_class(1) == "text-emerald-600" and deps.pnl_class(-1) == "text-red-600"
     assert deps.fmt_city("nyc") == "NYC" and deps.fmt_city("london") == "London"
     assert deps.fmt_ago(None) == "never" and deps.fmt_hours(None) == "—"

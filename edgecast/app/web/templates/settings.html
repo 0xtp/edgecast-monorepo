@@ -1,24 +1,22 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Settings · Edgecast{% endblock %}
 {% block content %}
-<h1 class="text-lg font-semibold text-zinc-50">Settings</h1>
-<p class="text-sm text-zinc-400">Effective configuration. Secrets are masked. Highlighted rows can be changed at runtime (same rules as Telegram <code>/set</code>); risk limits can never exceed the env <code>HARD_MAX_*</code> ceilings.</p>
+<h1 class="page-title">Settings</h1>
+<p class="page-sub">Effective configuration with secrets masked. Highlighted rows can be changed live (same rules as Telegram <code>/set</code>); risk limits can never exceed the env <code>HARD_MAX_*</code> ceilings.</p>
 
-<section class="card mt-4">
-  <h2 class="card-title">Health</h2>
-  <dl class="mt-2 grid gap-x-8 gap-y-1.5 text-sm sm:grid-cols-2 lg:grid-cols-3">
-    <div class="flex justify-between"><dt class="text-zinc-400">Worker heartbeat</dt><dd>{{ health.worker|ago }}</dd></div>
-    <div class="flex justify-between"><dt class="text-zinc-400">Last forecast pull</dt><dd>{{ health.last_forecast_pull|ago }}</dd></div>
-    <div class="flex justify-between"><dt class="text-zinc-400">Last market sync</dt><dd>{{ health.last_market_sync|ago }}</dd></div>
-    <div class="flex justify-between"><dt class="text-zinc-400">Last strategy run</dt><dd>{{ health.last_strategy_run|ago }}</dd></div>
-    <div class="flex justify-between"><dt class="text-zinc-400">Last bias fit</dt><dd>{{ health.last_bias_fit|ago }}</dd></div>
-    <div class="flex justify-between"><dt class="text-zinc-400">Geoblock checked</dt><dd>{{ health.geoblock_checked_at|ago }}</dd></div>
-    <div class="flex justify-between"><dt class="text-zinc-400">Telegram</dt><dd>{% if health.telegram_connected %}connected · {{ health.telegram_checked_at|ago }}{% elif health.telegram_connected is none %}not running{% else %}<span class="text-amber-200">disconnected</span>{% endif %}</dd></div>
+<section class="card mt-6">
+  <div class="flex items-center gap-4"><div class="tile tile-blue">{{ icon("activity", "h-6 w-6") }}</div><div><h2 class="text-base font-semibold">Health</h2><p class="text-sm text-gray-500">Background jobs and external APIs</p></div></div>
+  <dl class="mt-4 grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+    {% for label, v in [("Worker heartbeat", health.worker), ("Last forecast pull", health.last_forecast_pull), ("Last market sync", health.last_market_sync), ("Last strategy run", health.last_strategy_run), ("Last bias fit", health.last_bias_fit), ("Geoblock checked", health.geoblock_checked_at)] %}
+    <div class="flex justify-between border-b border-gray-100 pb-2"><dt class="text-gray-500">{{ label }}</dt><dd class="font-medium">{{ v|ago }}</dd></div>
+    {% endfor %}
+    <div class="flex justify-between border-b border-gray-100 pb-2"><dt class="text-gray-500">Telegram</dt><dd class="font-medium">{% if health.telegram_connected %}<span class="badge badge-green">Connected</span>{% elif health.telegram_connected is none %}<span class="badge badge-gray">Off</span>{% else %}<span class="badge badge-amber">Disconnected</span>{% endif %}</dd></div>
   </dl>
   {% if health.api %}
-  <table class="tbl mt-3"><thead><tr><th>API</th><th>Last OK</th><th>Last error</th></tr></thead><tbody>
-  {% for name, h in health.api.items() %}<tr><td>{{ name }}</td><td>{{ h.ok|ago }}</td><td class="max-w-md truncate text-xs text-amber-200" title="{{ h.error }}">{{ (h.error_at|ago ~ ' · ' ~ h.error) if h.error else '—' }}</td></tr>{% endfor %}
-  </tbody></table>{% endif %}
+  <div class="mt-4 overflow-x-auto rounded-lg border border-gray-200"><table class="tbl"><thead><tr><th>API</th><th>Last OK</th><th>Last error</th></tr></thead><tbody>
+  {% for name, h in health.api.items() %}<tr><td class="font-medium text-gray-900">{{ name }}</td><td>{{ h.ok|ago }}</td><td class="max-w-md truncate text-xs {{ 'text-red-600' if h.error }}" title="{{ h.error }}">{{ (h.error_at|ago ~ ' · ' ~ h.error) if h.error else '—' }}</td></tr>{% endfor %}
+  </tbody></table></div>{% endif %}
 </section>
 
 <section class="card mt-4 overflow-x-auto p-0">
@@ -26,19 +24,19 @@
   <thead><tr><th>Key</th><th>Value</th><th>Source</th><th></th></tr></thead>
   <tbody>
   {% for r in config %}
-  <tr class="{{ 'bg-indigo-500/5' if r.editable }}">
-    <td class="font-mono text-xs">{{ r.key }}</td>
-    <td class="max-w-md truncate font-mono text-xs">
+  <tr class="{{ 'bg-brand-50/40' if r.editable }}">
+    <td class="font-mono text-xs text-gray-900">{{ r.key }}</td>
+    <td class="max-w-md font-mono text-xs">
       {% if r.editable %}
-      <form class="flex items-center gap-1" hx-post="/action/set" hx-target="#toast">
+      <form class="flex items-center gap-2" hx-post="/action/set" hx-target="#toast">
         <input type="hidden" name="key" value="{{ r.key }}">
-        <input name="value" class="input py-1 font-mono text-xs" value="{{ r.value|join(',') if r.value is iterable and r.value is not string else r.value }}">
-        <button class="btn btn-sm">Save</button>
+        <input name="value" class="input input-sm font-mono" value="{{ r.value|join(',') if r.value is iterable and r.value is not string else r.value }}" aria-label="{{ r.key }}">
+        <button class="btn btn-primary btn-sm">Save</button>
       </form>
-      {% if runtime_keys[r.key].ceiling %}<div class="mt-0.5 text-[10px] text-zinc-500">ceiling {{ runtime_keys[r.key].ceiling }}</div>{% endif %}
-      {% else %}{{ r.value|join(',') if r.value is iterable and r.value is not string and r.value is not mapping else r.value }}{% endif %}
+      {% if runtime_keys[r.key].ceiling %}<div class="mt-1 text-[10px] text-gray-400">ceiling {{ runtime_keys[r.key].ceiling }}</div>{% endif %}
+      {% else %}<span class="text-gray-600">{{ r.value|join(',') if r.value is iterable and r.value is not string and r.value is not mapping else r.value }}</span>{% endif %}
     </td>
-    <td>{% if r.origin == 'override' %}<span class="badge badge-warn">runtime</span>{% elif r.origin == 'runtime' %}<span class="badge badge-yes">db (mode switch)</span>{% else %}<span class="badge badge-muted">env</span>{% endif %}</td>
+    <td>{% if r.origin == 'override' %}<span class="badge badge-amber">Runtime</span>{% elif r.origin == 'runtime' %}<span class="badge badge-blue">Mode switch</span>{% else %}<span class="badge badge-gray">Env</span>{% endif %}</td>
     <td>{% if r.origin == 'override' %}<form hx-post="/action/reset" hx-target="#toast"><input type="hidden" name="key" value="{{ r.key }}"><button class="btn btn-ghost btn-sm">Reset to env</button></form>{% endif %}</td>
   </tr>
   {% endfor %}

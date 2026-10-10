@@ -21,8 +21,10 @@ from app.config import Confidence, Mode, Settings
 from app.db.models import (
     Command,
     EquitySnapshot,
+    Fill,
     ForecastSnapshot,
     Heartbeat,
+    LedgerEntry,
     Market,
     OrderIntent,
     Position,
@@ -68,7 +70,10 @@ from app.strategy.sizing import size_order
 
 log = logging.getLogger(__name__)
 
-RUN_MAX_AGE = timedelta(hours=30)  # a model run older than this means we missed run cycles
+RUN_MAX_AGE = timedelta(hours=30)
+SETTLEMENT_WINDOW = timedelta(minutes=10)
+BALANCE_TOLERANCE_MICROS = 10_000  # $0.01
+BALANCE_ADJUST_MAX_MICROS = 500_000  # $0.50  # a model run older than this means we missed run cycles
 PREDICTION_EVERY = timedelta(minutes=55)
 NWS_SIGMA_CONFLICT = 3.0
 
@@ -640,6 +645,9 @@ class Engine:
         if held or working:
             sig.action = f"{book_name}: already {'holding' if held else 'working an order'}"
             return False
+        if mode == Mode.LIVE and not books.deposits(s, "LIVE"):
+            sig.action = "LIVE: waiting for the wallet balance sync"
+            return False
         halted, _why = is_halted(s)
         geo = bool(get_state(s, "geoblocked", True))
         rstate, snap = books.risk_state(
@@ -657,6 +665,7 @@ class Engine:
             depth_shares=opp.depth_shares,
             max_depth_pct=float(eff.MAX_BOOK_DEPTH_PCT),
             min_order_size=m.min_order_size,
+            round_up_to_min=bool(eff.ROUND_UP_TO_MIN_ORDER),
         )
         if sized.shares <= 0:
             sig.action = f"skipped: {sized.reason}"
@@ -718,6 +727,61 @@ class Engine:
                     n += ex.sync(s)
             s.commit()
         return n
+
+    def sync_live_balance(self, now: datetime | None = None) -> str:
+        """Tie the LIVE book to the wallet's real collateral balance.
+
+        * first time: the on-chain balance becomes the LIVE starting bankroll (DEPOSIT);
+        * afterwards: drift under BALANCE_ADJUST_MAX is booked as a fee/rounding true-up (counts in P&L), larger
+          drift is treated as an external deposit/withdrawal (excluded from P&L) and alerted.
+        Skipped while fills may still be settling on-chain, so a lagging balance is never mistaken for drift.
+        """
+        now = now or datetime.now(UTC)
+        with self.exec_lock, self.sessions() as s:
+            client = self.live_client(s)
+            recent_fill = s.scalar(
+                select(Fill.id).join(OrderIntent).where(OrderIntent.mode == "LIVE", Fill.ts >= now - SETTLEMENT_WINDOW)
+            )
+            if books.deposits(s, "LIVE") and (recent_fill or self._has_live_orders(s)):
+                return "skipped: fills may be settling"
+            wallet = books.to_micros(client.collateral_balance())
+            ledger = books.cash(s, "LIVE")
+            if not books.deposits(s, "LIVE"):
+                s.add(
+                    LedgerEntry(book="LIVE", kind="DEPOSIT", amount_micros=wallet, ref="on-chain balance at LIVE start")
+                )
+                set_state(s, "equity_peak:LIVE", books.usd(wallet))
+                audit(s, "WORKER", "LIVE_BANKROLL", f"seeded from wallet balance ${books.usd(wallet):.2f}")
+                alert(s, "info", f"💼 LIVE bankroll set from wallet balance: ${books.usd(wallet):.2f}")
+                s.commit()
+                return f"seeded ${books.usd(wallet):.2f}"
+            drift = wallet - ledger
+            if abs(drift) <= BALANCE_TOLERANCE_MICROS:
+                return "in sync"
+            if abs(drift) <= BALANCE_ADJUST_MAX_MICROS:
+                s.add(
+                    LedgerEntry(
+                        book="LIVE",
+                        kind="ADJUST",
+                        amount_micros=drift,
+                        pnl_micros=drift,
+                        ref="balance true-up (fees/rounding)",
+                    )
+                )
+                msg = f"adjusted {books.usd(drift):+.4f}"
+            else:
+                kind = "DEPOSIT" if drift > 0 else "WITHDRAW"
+                s.add(LedgerEntry(book="LIVE", kind=kind, amount_micros=drift, ref="external transfer detected"))
+                alert(
+                    s,
+                    "risk",
+                    f"💼 LIVE wallet balance differs from the books by ${books.usd(drift):+.2f}; "
+                    f"recorded as {kind.lower()} (not P&L). Check if you moved funds.",
+                )
+                msg = f"{kind.lower()} {books.usd(drift):+.2f}"
+            audit(s, "WORKER", "LIVE_BALANCE", msg)
+            s.commit()
+            return msg
 
     def reconcile_live(self) -> None:
         from app.execution.reconcile import reconcile
@@ -1228,7 +1292,11 @@ class Engine:
             return "; ".join(out) or "kept LIVE orders and positions"
         if cmd.kind == "RECONCILE":
             self.reconcile_live()
-            return "reconciled"
+            return "reconciled; balance " + self.sync_live_balance()
+        if cmd.kind == "SCAN_NOW":
+            n = self.refresh_forecasts()
+            stats = self.run_strategy()
+            return f"{n} forecast snapshots, {stats['signals']} signals, {stats['orders']} orders"
         if cmd.kind == "TOOK":
             return self.took(int(p["signal_id"]), float(p["price"]), float(p["usd"]), cmd.source, cmd.actor)
         return f"unknown command {cmd.kind}"
@@ -1249,6 +1317,7 @@ class Engine:
         if mode == Mode.LIVE or self._has_live_orders_now():
             try:
                 self.reconcile_live()  # before anything else touches the exchange
+                self.sync_live_balance()
             except Exception as e:
                 log.error("startup reconcile failed: %s — halting", e)
                 with self.sessions() as s:

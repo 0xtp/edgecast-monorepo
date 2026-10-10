@@ -1,32 +1,33 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}History · Edgecast{% endblock %}
 {% block content %}
-<div class="flex flex-wrap items-end justify-between gap-3">
-  <div><h1 class="text-lg font-semibold text-zinc-50">History</h1><p class="text-sm text-zinc-400">Every order intent and its fills, with the reason for entry or exit.</p></div>
-  <form class="flex flex-wrap items-end gap-2" method="get">
-    <label class="text-xs text-zinc-400">City<input name="city" value="{{ f.city }}" class="input mt-1 w-28"></label>
-    <label class="text-xs text-zinc-400">Date<input name="day" type="date" value="{{ f.day }}" class="input mt-1 w-36"></label>
-    <label class="text-xs text-zinc-400">Mode<select name="mode" class="input mt-1 w-24"><option value="">All</option>{% for m in ["PAPER","LIVE"] %}<option {{ 'selected' if f.mode == m }}>{{ m }}</option>{% endfor %}</select></label>
-    <label class="text-xs text-zinc-400">Outcome<select name="outcome" class="input mt-1 w-24"><option value="">All</option>{% for o in ["YES","NO"] %}<option {{ 'selected' if f.outcome == o }}>{{ o }}</option>{% endfor %}</select></label>
-    <button class="btn">Filter</button>
-    <a class="btn" href="/history.csv?city={{ f.city }}&day={{ f.day }}&mode={{ f.mode }}&outcome={{ f.outcome }}">Export CSV</a>
-  </form>
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <div><h1 class="page-title">History</h1><p class="page-sub">Every order and its fills, with the reason for entry or exit.</p></div>
+  <a class="btn" href="/history.csv?city={{ f.city }}&day={{ f.day }}&mode={{ f.mode }}&outcome={{ f.outcome }}">{{ icon("download", "h-4 w-4") }} Export CSV</a>
 </div>
+<form class="mt-6 flex flex-wrap items-end gap-3" method="get">
+  <label><span class="label">City</span><input name="city" value="{{ f.city }}" class="input w-36" placeholder="Any"></label>
+  <label><span class="label">Date</span><input name="day" type="date" value="{{ f.day }}" class="input w-40"></label>
+  <label><span class="label">Mode</span><select name="mode" class="input w-32"><option value="">All</option>{% for m in ["PAPER","LIVE"] %}<option value="{{ m }}" {{ 'selected' if f.mode == m }}>{{ m|title }}</option>{% endfor %}</select></label>
+  <label><span class="label">Outcome</span><select name="outcome" class="input w-32"><option value="">All</option>{% for o in ["YES","NO"] %}<option value="{{ o }}" {{ 'selected' if f.outcome == o }}>{{ o|title }}</option>{% endfor %}</select></label>
+  <button class="btn btn-primary">{{ icon("filter", "h-4 w-4") }} Apply</button>
+</form>
 <div class="card mt-4 overflow-x-auto p-0">
 <table class="tbl">
   <thead><tr><th>Time</th><th>Mode</th><th>Market</th><th>Side</th><th class="num">Limit</th><th class="num">Size</th><th class="num">Filled</th><th class="num">Avg fill</th><th class="num">Fees</th><th>Status</th><th>Reason</th></tr></thead>
   <tbody>
   {% for r in rows %}{% set it = r.it %}
   <tr>
-    <td>{{ it.created_at|dt }}</td><td class="text-xs">{{ it.mode }}</td>
-    <td class="max-w-[16rem] truncate"><a href="{{ r.m.url }}" target="_blank" rel="noopener">{{ r.ev.city|city }} · {{ r.ev.local_date }}</a><div class="text-[11px] text-zinc-500">{{ r.m.bucket_label }}</div></td>
-    <td><span class="badge {{ 'badge-yes' if it.outcome == 'YES' else 'badge-no' }}">{{ it.side }} {{ it.outcome }}</span></td>
+    <td>{{ it.created_at|dt }}</td><td class="text-xs text-gray-500">{{ it.mode|title }}</td>
+    <td class="max-w-[16rem]"><a href="{{ r.m.url }}" target="_blank" rel="noopener" class="font-medium text-gray-900 hover:text-brand-800">{{ r.ev.city|city }} · {{ r.ev.local_date }}</a><div class="text-xs text-gray-400">{{ r.m.bucket_label }}</div></td>
+    <td><span class="badge {{ 'badge-blue' if it.side == 'BUY' else 'badge-amber' }}">{{ it.side|title }} {{ it.outcome|lower }}</span></td>
     <td class="num">{{ "%.2f"|format(it.price) }}</td><td class="num">{{ "%.2f"|format(it.size) }}</td><td class="num">{{ "%.2f"|format(it.filled_size) }}</td>
     <td class="num">{{ "%.3f"|format(r.avg) if r.avg is not none else '—' }}</td><td class="num">{{ r.fees|usd }}</td>
-    <td><span class="badge {{ 'badge-warn' if it.status in ('PENDING','FAILED','REJECTED') else 'badge-muted' }}" title="{{ it.error }}">{{ it.status }}</span></td>
-    <td class="max-w-[18rem] truncate text-xs text-zinc-400" title="{{ it.reason }}">{{ it.reason }}</td>
+    <td><span class="badge {{ 'badge-green' if it.status == 'FILLED' else 'badge-red' if it.status in ('FAILED','REJECTED') else 'badge-amber' if it.status in ('PENDING','OPEN','PARTIAL') else 'badge-gray' }}" title="{{ it.error }}">{{ it.status|lower }}</span></td>
+    <td class="max-w-[18rem] truncate text-xs text-gray-500" title="{{ it.reason }}">{{ it.reason }}</td>
   </tr>
-  {% else %}<tr><td colspan="11" class="py-10 text-center text-zinc-500">No orders yet.</td></tr>{% endfor %}
+  {% else %}<tr><td colspan="11" class="py-16 text-center"><p class="font-medium text-gray-900">No orders yet</p><p class="text-sm text-gray-500">Orders appear here in Paper or Live mode.</p></td></tr>{% endfor %}
   </tbody>
 </table>
 </div>

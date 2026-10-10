@@ -142,8 +142,8 @@ def fmt_hours(h: Any) -> str:
 
 def pnl_class(v: Any) -> str:
     if v is None or abs(float(v)) < 0.005:
-        return "text-zinc-300"
-    return "text-emerald-400" if float(v) > 0 else "text-rose-400"
+        return "text-gray-900"
+    return "text-emerald-600" if float(v) > 0 else "text-red-600"
 
 
 def fmt_city(c: Any) -> str:

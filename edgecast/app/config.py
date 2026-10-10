@@ -68,6 +68,7 @@ class Settings(BaseSettings):
     MAX_DAILY_LOSS_USD: float = Field(20, gt=0)
     MAX_DRAWDOWN_PCT: float = Field(15, gt=0, le=100)
     KELLY_FRACTION: float = Field(0.15, gt=0, le=1)
+    ROUND_UP_TO_MIN_ORDER: bool = False
 
     # --- Edge & execution ---
     MIN_EDGE: float = Field(0.06, gt=0, lt=1)
@@ -126,6 +127,8 @@ class Settings(BaseSettings):
     TZ: str = "UTC"
     LOG_LEVEL: str = "INFO"
     BACKUP_S3_URI: str = ""
+    API_TOKEN: SecretStr = SecretStr("")
+    API_CORS_ORIGINS: CsvList = []
 
     # --- Scanner / manual trading ---
     MANUAL_BANKROLL_USD: float = Field(200, gt=0)
@@ -151,6 +154,18 @@ class Settings(BaseSettings):
     @classmethod
     def _split_csv(cls, v: Any) -> list[str]:
         return [c.lower() for c in _csv(v)]
+
+    @field_validator("API_CORS_ORIGINS", mode="before")
+    @classmethod
+    def _origins(cls, v: Any) -> list[str]:
+        return _csv(v)
+
+    @field_validator("API_TOKEN")
+    @classmethod
+    def _token(cls, v: SecretStr) -> SecretStr:
+        if v.get_secret_value() and len(v.get_secret_value()) < 24:
+            raise ValueError("API_TOKEN must be at least 24 characters (or empty to disable the API)")
+        return v
 
     @field_validator("TELEGRAM_ALLOWED_USER_IDS", mode="before")
     @classmethod
@@ -305,6 +320,7 @@ RUNTIME_KEYS: dict[str, RuntimeKey] = {
     "MAX_TOTAL_EXPOSURE_USD": RuntimeKey("float", 1, None, "HARD_MAX_TOTAL_EXPOSURE_USD", risk=True),
     "MAX_EXPOSURE_PER_MARKET_USD": RuntimeKey("float", 1, None, "HARD_MAX_TOTAL_EXPOSURE_USD", risk=True),
     "MAX_EXPOSURE_PER_CITY_DAY_USD": RuntimeKey("float", 1, None, "HARD_MAX_TOTAL_EXPOSURE_USD", risk=True),
+    "ROUND_UP_TO_MIN_ORDER": RuntimeKey("bool", risk=True),
     "CITY_ALLOWLIST": RuntimeKey("csv"),
     "CITY_BLOCKLIST": RuntimeKey("csv"),
     "TELEGRAM_NOTIFY_SIGNALS": RuntimeKey("bool"),
@@ -313,7 +329,7 @@ RUNTIME_KEYS: dict[str, RuntimeKey] = {
     "TELEGRAM_NOTIFY_RESOLUTIONS": RuntimeKey("bool"),
 }
 
-SECRET_KEYS = {"POLY_PRIVATE_KEY", "UI_PASSWORD_HASH", "SESSION_SECRET", "TELEGRAM_BOT_TOKEN"}
+SECRET_KEYS = {"POLY_PRIVATE_KEY", "UI_PASSWORD_HASH", "SESSION_SECRET", "TELEGRAM_BOT_TOKEN", "API_TOKEN"}
 
 
 @lru_cache(maxsize=1)
