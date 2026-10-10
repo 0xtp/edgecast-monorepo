@@ -1,5 +1,24 @@
 # Edgecast — Plan
 
+## Status (build complete)
+
+Built and tested end to end on synthetic fixtures. The live data sources were unreachable from the build
+environment, so the live-verification steps in the README ("What is verified, and what is not") are still yours to run.
+
+The open questions were not answered before the build. These defaults were used, and each is easy to change:
+
+| Question | Default used | Where to change |
+|---|---|---|
+| VPS / region | Any 2 vCPU / 2–4 GB host; AWS eu-west-1 recommended | README → Deployment |
+| Domain | `PUBLIC_DOMAIN` env; Caddy issues HTTPS automatically | `.env` |
+| Telegram | Built and fully tested; off until `TELEGRAM_ENABLED=true` | `.env` |
+| Bankroll / caps | Values from the brief ($200 bot, $200 manual, caps as listed) | `.env`, runtime overrides |
+| Wallet type | Plain EOA (SDK auto-detects; proxy/safe via `POLY_FUNDER_ADDRESS`) | `.env` |
+| Cities | All parsable cities with a curated station (50 stations) | `CITY_ALLOWLIST`, `stations.yaml` |
+| Time zone | `TZ=UTC` | `.env` |
+| SDK | `polymarket-client==0.13.0` (official unified SDK), pinned, behind an adapter | `pyproject.toml`, `app/execution/live.py` |
+
+
 Phase 0 deliverable. Covers what the current Polymarket and Open-Meteo stack actually looks like,
 the architecture, the probability model, and the open questions that block the build.
 

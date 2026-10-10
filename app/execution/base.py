@@ -64,12 +64,13 @@ def place_order(
             executor.submit(s, intent)
         finally:
             s.commit()
+        mk = intent.market
         if intent.status in ("OPEN", "PARTIAL", "FILLED", "PENDING"):
             alert(
                 s,
                 "order",
-                f"📝 {executor.book} {side} {outcome} {size:g} @ {price:.2f} — {market.bucket_label} · "
-                f"{market.event.title}\nstatus {intent.status} · {reason}",
+                f"📝 {executor.book} {side} {outcome} {size:g} @ {price:.2f} — {mk.bucket_label} · "
+                f"{mk.event.title}\nstatus {intent.status} · {reason}",
             )
         elif intent.status in ("REJECTED", "FAILED"):
             alert(s, "order", f"⚠️ {executor.book} order {intent.status}: {intent.error[:200]}")

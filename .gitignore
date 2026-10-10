@@ -14,3 +14,7 @@ __pycache__/
 .coverage
 htmlcov/
 KILL
+backtest/cache/
+backtest/reports/*.html
+backtest/reports/*.json
+coverage.xml

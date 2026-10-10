@@ -33,10 +33,12 @@ def build(sessions, settings, fee=FeeInfo(0.25, 1.0)):
     d = tomorrow_local()
     ev = nyc_event("100", d)
     clob = FakeClob(fee)
-    om = FakeOpenMeteo({"ecmwf_ifs": ensemble("ecmwf_ifs", d, 75.0, 1.5, 51, seed=1),
-                        "gfs": ensemble("gfs", d, 75.2, 1.5, 31, seed=2)})
-    clients = Clients(gamma=FakeGamma([ev]), clob=clob, data_api=FakeDataApi(), openmeteo=om, iem=FakeIem(),
-                      nws=FakeNws())
+    om = FakeOpenMeteo(
+        {"ecmwf_ifs": ensemble("ecmwf_ifs", d, 75.0, 1.5, 51, seed=1), "gfs": ensemble("gfs", d, 75.2, 1.5, 31, seed=2)}
+    )
+    clients = Clients(
+        gamma=FakeGamma([ev]), clob=clob, data_api=FakeDataApi(), openmeteo=om, iem=FakeIem(), nws=FakeNws()
+    )
     eng = Engine(sessions, settings, clients)
     # 74-75°F bucket is index 3 (69-, 70-71, 72-73, 74-75 ...)
     tok_y, tok_n = "tok10003y", "tok10003n"
@@ -91,8 +93,14 @@ def test_paper_round_trip_reconciles_to_the_micro(sessions, settings):
     with sessions() as s:
         pos = s.scalar(select(Position))
         assert pos.status == "CLOSED" and "TAKE_PROFIT" in pos.exit_reason
-        buy_fee = books.to_micros(0.25 * 0.15 * 0.85 * pos_size) if (pos_size := sum(
-            e.size for e in s.scalars(select(__import__("app.db.models", fromlist=["Fill"]).Fill))) / 2) else 0
+        buy_fee = (
+            books.to_micros(0.25 * 0.15 * 0.85 * pos_size)
+            if (
+                pos_size := sum(e.size for e in s.scalars(select(__import__("app.db.models", fromlist=["Fill"]).Fill)))
+                / 2
+            )
+            else 0
+        )
         cash = books.cash(s, "PAPER")
         entries = s.scalars(select(LedgerEntry).where(LedgerEntry.book == "PAPER")).all()
         assert cash == sum(e.amount_micros for e in entries)
@@ -102,8 +110,12 @@ def test_paper_round_trip_reconciles_to_the_micro(sessions, settings):
         assert pos.realized_micros > 0
         # realised = proceeds - sell fee - (buy cost + buy fee), each rounded to the micro once
         size = pos_size
-        expected = (books.to_micros(0.30 * size) - books.to_micros(0.25 * 0.30 * 0.70 * size)
-                    - books.to_micros(0.15 * size) - buy_fee)
+        expected = (
+            books.to_micros(0.30 * size)
+            - books.to_micros(0.25 * 0.30 * 0.70 * size)
+            - books.to_micros(0.15 * size)
+            - buy_fee
+        )
         assert pos.realized_micros == expected
 
 
@@ -123,8 +135,12 @@ def test_resolution_pays_out_and_scores(sessions, settings):
     with sessions() as s:
         pos = s.scalar(select(Position))
         assert pos.status == "RESOLVED"
-        paid = -sum(e.amount_micros for e in s.scalars(select(LedgerEntry).where(
-            LedgerEntry.position_id == pos.id, LedgerEntry.kind.in_(("BUY", "FEE")))))
+        paid = -sum(
+            e.amount_micros
+            for e in s.scalars(
+                select(LedgerEntry).where(LedgerEntry.position_id == pos.id, LedgerEntry.kind.in_(("BUY", "FEE")))
+            )
+        )
         assert pos.realized_micros == books.to_micros(pos.size) - paid
         snap = books.snapshot(s, "PAPER")
         assert books.to_micros(snap.equity) == books.to_micros(snap.deposits) + pos.realized_micros

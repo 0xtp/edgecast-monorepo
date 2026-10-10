@@ -34,9 +34,20 @@ def c_labels(lo: int, hi: int) -> list[str]:
     return [f"{lo - 1}°C or below", *[f"{t}°C" for t in range(lo, hi + 1)], f"{hi + 1}°C or higher"]
 
 
-def make_event(event_id: str, *, title: str, labels: list[str], station: str, icao: str, source_url: str,
-               unit: str = "F", local_date: date, closed: bool = False, winner: int | None = None,
-               fees_enabled: bool = True) -> dict:
+def make_event(
+    event_id: str,
+    *,
+    title: str,
+    labels: list[str],
+    station: str,
+    icao: str,
+    source_url: str,
+    unit: str = "F",
+    local_date: date,
+    closed: bool = False,
+    winner: int | None = None,
+    fees_enabled: bool = True,
+) -> dict:
     d = local_date
     unit_word = "Fahrenheit" if unit == "F" else "Celsius"
     source = "Wunderground" if "wunderground" in source_url else "NOAA"
@@ -47,39 +58,53 @@ def make_event(event_id: str, *, title: str, labels: list[str], station: str, ic
         prices = ["0.5", "0.5"]
         if closed and winner is not None:
             prices = ["1", "0"] if i == winner else ["0", "1"]
-        markets.append({
-            "id": f"{event_id}{i:02d}",
-            "conditionId": f"0xcond{event_id}{i:02d}",
-            "question": f"Will the highest temperature be {lab} on {d.strftime('%B %-d')}?",
-            "groupItemTitle": lab,
-            "slug": f"m-{event_id}-{i}",
-            "clobTokenIds": json.dumps([f"tok{event_id}{i:02d}y", f"tok{event_id}{i:02d}n"]),
-            "outcomes": json.dumps(["Yes", "No"]),
-            "outcomePrices": json.dumps(prices),
-            "negRisk": True,
-            "orderPriceMinTickSize": 0.01,
-            "orderMinSize": 5,
-            "feesEnabled": fees_enabled,
-            "active": not closed,
-            "closed": closed,
-            "acceptingOrders": not closed,
-            "endDate": end.isoformat().replace("+00:00", "Z"),
-            "description": rules,
-            "resolutionSource": source_url,
-        })
+        markets.append(
+            {
+                "id": f"{event_id}{i:02d}",
+                "conditionId": f"0xcond{event_id}{i:02d}",
+                "question": f"Will the highest temperature be {lab} on {d.strftime('%B %-d')}?",
+                "groupItemTitle": lab,
+                "slug": f"m-{event_id}-{i}",
+                "clobTokenIds": json.dumps([f"tok{event_id}{i:02d}y", f"tok{event_id}{i:02d}n"]),
+                "outcomes": json.dumps(["Yes", "No"]),
+                "outcomePrices": json.dumps(prices),
+                "negRisk": True,
+                "orderPriceMinTickSize": 0.01,
+                "orderMinSize": 5,
+                "feesEnabled": fees_enabled,
+                "active": not closed,
+                "closed": closed,
+                "acceptingOrders": not closed,
+                "endDate": end.isoformat().replace("+00:00", "Z"),
+                "description": rules,
+                "resolutionSource": source_url,
+            }
+        )
     return {
-        "id": event_id, "slug": title.lower().replace(" ", "-").replace("?", ""), "title": title,
-        "description": rules, "resolutionSource": source_url, "endDate": end.isoformat().replace("+00:00", "Z"),
-        "negRisk": True, "closed": closed, "markets": markets,
+        "id": event_id,
+        "slug": title.lower().replace(" ", "-").replace("?", ""),
+        "title": title,
+        "description": rules,
+        "resolutionSource": source_url,
+        "endDate": end.isoformat().replace("+00:00", "Z"),
+        "negRisk": True,
+        "closed": closed,
+        "markets": markets,
     }
 
 
 def nyc_event(event_id: str, local_date: date, **kw) -> dict:
     return make_event(
-        event_id, title=f"Highest temperature in NYC on {local_date.strftime('%B %-d')}?",
-        labels=f_labels(70, 79), station="LaGuardia Airport Station", icao="KLGA",
-        source_url="https://www.wunderground.com/history/daily/us/ny/new-york-city/KLGA", unit="F",
-        local_date=local_date, **kw)
+        event_id,
+        title=f"Highest temperature in NYC on {local_date.strftime('%B %-d')}?",
+        labels=f_labels(70, 79),
+        station="LaGuardia Airport Station",
+        icao="KLGA",
+        source_url="https://www.wunderground.com/history/daily/us/ny/new-york-city/KLGA",
+        unit="F",
+        local_date=local_date,
+        **kw,
+    )
 
 
 def tomorrow_local(tz: str = "America/New_York") -> date:
@@ -87,20 +112,29 @@ def tomorrow_local(tz: str = "America/New_York") -> date:
 
 
 def book(token: str, bids: list[tuple[float, float]], asks: list[tuple[float, float]], ts: str = "1") -> OrderBook:
-    return OrderBook(token, [Level(p, s) for p, s in sorted(bids, reverse=True)],
-                     [Level(p, s) for p, s in sorted(asks)], 0.01, 5, True, ts)
+    return OrderBook(
+        token,
+        [Level(p, s) for p, s in sorted(bids, reverse=True)],
+        [Level(p, s) for p, s in sorted(asks)],
+        0.01,
+        5,
+        True,
+        ts,
+    )
 
 
-def ensemble(family: str, local_date: date, center: float, spread: float, n: int, unit: str = "F",
-             seed: int = 0) -> EnsembleForecast:
+def ensemble(
+    family: str, local_date: date, center: float, spread: float, n: int, unit: str = "F", seed: int = 0
+) -> EnsembleForecast:
     rng = random.Random(seed)
     times = [datetime.combine(local_date, datetime.min.time()) + timedelta(hours=h) for h in range(-24, 48)]
     members = {}
     for k in range(n):
         peak = rng.gauss(center, spread)
         members[k] = [peak - 8 * (1 - math.cos(2 * math.pi * ((t.hour - 15) % 24) / 24)) / 2 for t in times]
-    return EnsembleForecast(family, f"{family}_ens", unit, times, members, datetime.now(UTC) - timedelta(hours=6),
-                            datetime.now(UTC))
+    return EnsembleForecast(
+        family, f"{family}_ens", unit, times, members, datetime.now(UTC) - timedelta(hours=6), datetime.now(UTC)
+    )
 
 
 class FakeGamma:

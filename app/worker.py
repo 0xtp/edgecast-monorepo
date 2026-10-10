@@ -119,6 +119,13 @@ class Worker:
                 misfire_grace_time=60,
                 **interval,
             )
+        from app.services.backup import backup
+
+        sched.add_job(
+            self.guarded("backup", lambda: backup(s.DATABASE_URL, s.DATA_DIR, s.BACKUP_S3_URI)),
+            CronTrigger(hour=3, minute=17, timezone=s.TZ),
+            id="backup",
+        )
         if s.TELEGRAM_ENABLED:
             t = parse_hhmm(s.TELEGRAM_DAILY_SUMMARY_TIME)
             sched.add_job(

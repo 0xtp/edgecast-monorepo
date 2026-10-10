@@ -1,0 +1,13 @@
+.git
+.venv
+.env
+.env.*
+data
+**/__pycache__
+.pytest_cache
+.mypy_cache
+.ruff_cache
+backtest/cache
+backtest/reports/*.html
+backtest/reports/*.json
+tests

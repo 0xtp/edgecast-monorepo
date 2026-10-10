@@ -1,0 +1,12 @@
+title = "edgecast gitleaks config"
+[extend]
+useDefault = true
+
+[[rules]]
+id = "evm-private-key"
+description = "Raw 32-byte hex private key"
+regex = '''(?i)(private[_-]?key|POLY_PRIVATE_KEY)\s*[=:]\s*['"]?(0x)?[0-9a-f]{64}'''
+tags = ["key", "evm"]
+
+[allowlist]
+paths = ['''\.env\.example''']

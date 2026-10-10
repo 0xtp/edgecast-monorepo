@@ -1,0 +1,11 @@
+# Caddy obtains and renews HTTPS certificates for PUBLIC_DOMAIN automatically.
+{$PUBLIC_DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+	@static path /static/*
+	header @static Cache-Control "public, max-age=86400"
+	reverse_proxy web:8000
+}

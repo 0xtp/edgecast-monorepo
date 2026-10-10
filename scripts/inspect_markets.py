@@ -84,9 +84,7 @@ def md_table(rows: list[dict[str, Any]]) -> str:
     out = ["| Title | Unit | Station | Source | Buckets | End (UTC) |", "|---|---|---|---|---|---|"]
     for r in rows:
         buckets = ", ".join(r["buckets"][:3]) + (" … " + r["buckets"][-1] if len(r["buckets"]) > 3 else "")
-        out.append(
-            f"| {r['title']} | °{r['unit']} | {r['station']} | {r['source_host']} | {buckets} | {r['end']} |"
-        )
+        out.append(f"| {r['title']} | °{r['unit']} | {r['station']} | {r['source_host']} | {buckets} | {r['end']} |")
     return "\n".join(out)
 
 

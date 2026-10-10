@@ -18,9 +18,11 @@ REPORTS_DIR_NAME = "reports"
 
 
 def reports_dir() -> Any:
+    import os
     from pathlib import Path
 
-    return Path(__file__).resolve().parents[3] / "backtest" / REPORTS_DIR_NAME
+    env = os.environ.get("EDGECAST_REPORTS_DIR")
+    return Path(env) if env else Path(__file__).resolve().parents[3] / "backtest" / REPORTS_DIR_NAME
 
 
 def render(request: Request, name: str, ctx: dict[str, Any], *, page: str) -> Response:

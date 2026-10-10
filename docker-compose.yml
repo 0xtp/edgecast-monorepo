@@ -1,0 +1,56 @@
+# docker compose up -d   (fill .env first: cp .env.example .env)
+x-app: &app
+  build: .
+  image: edgecast:latest
+  env_file: .env
+  environment:
+    DATA_DIR: /data
+    EDGECAST_REPORTS_DIR: /data/reports
+  volumes:
+    - edgecast-data:/data
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+
+services:
+  worker:
+    <<: *app
+    command: ["python", "-m", "app.worker"]
+    healthcheck:
+      # Healthy while the worker's heartbeat (written every 2 s) is fresh.
+      test: ["CMD", "python", "-m", "app.tools.healthcheck", "worker"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  web:
+    <<: *app
+    command: ["uvicorn", "--factory", "app.web.main:create_app", "--host", "0.0.0.0", "--port", "8000",
+              "--proxy-headers", "--forwarded-allow-ips", "*"]
+    depends_on:
+      worker: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.tools.healthcheck", "web"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    expose: ["8000"]
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    depends_on: [web]
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  edgecast-data:
+  caddy-data:
+  caddy-config:

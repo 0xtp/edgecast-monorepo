@@ -770,6 +770,7 @@ class Engine:
                     new_forecast=new_fc,
                 )
                 pos.last_p_model, pos.last_eval_at = p_out, now
+                log.debug("exit eval pos=%s p=%.3f bid=%s -> %s", pos.id, p_out, ob.best_bid, d.kind)
                 if d.kind == ExitKind.HOLD:
                     if pos.exit_signal:
                         pos.exit_signal, pos.exit_signal_detail = "", ""
