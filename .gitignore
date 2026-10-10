@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+data/
+__pycache__/
+*.pyc
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+KILL
