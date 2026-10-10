@@ -369,3 +369,24 @@ def test_paper_24h_soak_reconciles_to_the_cent(sessions, settings):
         assert intents and sells and closed  # the soak must actually trade and exit
         errors = [o.text for o in db.scalars(select(Outbox)) if "failed" in o.text.lower()]
         assert not errors
+
+
+def test_live_exits_refused_when_geoblocked(sessions, monkeypatch, env):
+    s = go_live(sessions, monkeypatch)
+    ex = FakeExchange()
+    eng, clob = make_engine(sessions, s, live_client=ex)
+    eng.sync_markets()
+    eng.refresh_forecasts()
+    eng.run_strategy()
+    ex.match(ex.posted[0], ex.orders[ex.posted[0]].original_size)
+    eng.sync_orders()
+    with sessions() as db:
+        set_state(db, "geoblocked", True)
+        db.commit()
+        pid = db.scalar(select(Position.id))
+    clob.book_map["tok10003y"] = book("tok10003y", [(0.30, 400)], [(0.32, 400)], ts="g")
+    assert eng.run_exits() == 0
+    assert eng.close_position(pid).startswith("close refused: geoblocked")
+    assert len(ex.posted) == 1  # no SELL left the process
+    with sessions() as db:
+        assert "exit blocked" in db.get(Position, pid).exit_signal_detail

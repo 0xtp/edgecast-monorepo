@@ -47,7 +47,7 @@ from app.polymarket.clob import Clob, OrderBook
 from app.polymarket.data_api import DataApi
 from app.polymarket.gamma import Gamma
 from app.polymarket.geoblock import check_geoblock
-from app.risk import OrderRequest, RiskLimits, breach, check, drawdown_fraction_of_limit
+from app.risk import OrderRequest, RiskLimits, RiskState, breach, check, drawdown_fraction_of_limit
 from app.services import books
 from app.services.state import (
     Effective,
@@ -791,6 +791,23 @@ class Engine:
             s.commit()
         return n
 
+    def _exit_allowed(self, s: Session, pos: Position, price: float, size: float) -> str:
+        """Exits pass risk.py too: allowed while halted/paused, refused when LIVE is geoblocked."""
+        geo = bool(get_state(s, "geoblocked", True)) and pos.mode == "LIVE"
+        decision = check(
+            OrderRequest(
+                market_id=pos.market_id,
+                city_day=books.city_day_key(pos.market.event),
+                side="SELL",
+                price=price,
+                size=size,
+                fee_per_share=0.0,
+            ),
+            RiskState(geoblocked=geo),
+            self.limits(effective(s, self.settings)),
+        )
+        return "" if decision.approved else decision.reason
+
     def _exit_bot_position(
         self, s: Session, eff: Effective, mode: Mode, pos: Position, ob: OrderBook, kind: str, reason: str
     ) -> int:
@@ -809,6 +826,16 @@ class Engine:
         price = ob.best_bid
         size = round(min(pos.size, ob.bid_depth(price)), 2)
         if size < min(pos.market.min_order_size, pos.size) or size <= 0:
+            return 0
+        refused = self._exit_allowed(s, pos, price, size)
+        if refused:
+            pos.exit_signal, pos.exit_signal_detail = kind, f"{reason} (exit blocked: {refused})"
+            alert(
+                s,
+                "risk",
+                f"⛔ {pos.mode} exit blocked ({refused}) — {pos.market.bucket_label} {pos.outcome}",
+                dedupe_key=f"exitblock:{pos.id}",
+            )
             return 0
         pos.exit_signal, pos.exit_signal_detail = kind, reason
         s.commit()
@@ -844,6 +871,9 @@ class Engine:
             ob = self.book(pos.token_id, max_age_s=0)
             if ob.best_bid is None:
                 return "no bid to sell into"
+            refused = self._exit_allowed(s, pos, ob.best_bid, pos.size)
+            if refused:
+                return f"close refused: {refused}"
             ex = self.executor(s, Mode(pos.mode))
             if ex is None:
                 return "no executor"
@@ -1023,8 +1053,6 @@ class Engine:
                 peak = books.equity_peak(s, book, snap.equity)
                 s.add(EquitySnapshot(book=book, cash=snap.cash, exposure=snap.exposure, equity=snap.equity))
                 if book != "MANUAL":
-                    from app.risk import RiskState
-
                     frac = drawdown_fraction_of_limit(
                         RiskState(realized_today=snap.realized_today, equity=snap.equity, equity_peak=peak),
                         self.limits(eff),
