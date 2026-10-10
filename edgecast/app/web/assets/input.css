@@ -86,7 +86,7 @@
 
   /* modal */
   .modal-backdrop { @apply fixed inset-0 z-40 bg-gray-900/40 backdrop-blur-[2px]; }
-  .modal { @apply fixed inset-x-3 top-6 z-50 mx-auto max-h-[calc(100vh-3rem)] max-w-5xl overflow-hidden rounded-2xl border-2 border-brand-500/60 bg-white shadow-pop sm:top-12; }
+  .modal { @apply fixed inset-x-3 top-6 z-50 mx-auto max-h-[calc(100vh-3rem)] max-w-5xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-pop sm:top-12; }
 }
 
 /* uPlot on light */
